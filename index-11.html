@@ -1,0 +1,228 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="theme-color" content="#0b5d3b">
+<title>Meus Comprovantes de Votação</title>
+<style>
+:root{--card:rgba(255,255,255,.94);--tx:#14211b;--mut:#5b6b63;--pri:#0b7a4b;--bd:#d6e2db;--dan:#c62828;--bg:#e9f3ee}
+@media (prefers-color-scheme:dark){:root{--card:rgba(20,32,27,.94);--tx:#e8f2ec;--mut:#9db3a8;--pri:#3ecf8e;--bd:#2c4338;--dan:#ef6b6b;--bg:#0c1713}}
+*{box-sizing:border-box}
+html{scroll-padding-top:env(safe-area-inset-top,0px)}
+body{margin:0;color:var(--tx);font:16px/1.4 system-ui,-apple-system,"Segoe UI",Roboto,sans-serif;min-height:100%;
+ padding-top:env(safe-area-inset-top,0px);padding-bottom:env(safe-area-inset-bottom,0px);
+ background-color:var(--bg);
+ background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='120' height='120'%3E%3Cg fill='none' stroke='%230b7a4b' stroke-opacity='.12' stroke-width='2'%3E%3Crect x='30' y='38' width='60' height='44' rx='6'/%3E%3Cpath d='M45 38v-8h30v8M48 60l8 8 16-18'/%3E%3C/g%3E%3C/svg%3E"),
+ linear-gradient(160deg,#0b7a4b 0,#0b7a4b 190px,transparent 190px);
+ background-attachment:fixed,scroll}
+header{padding:22px 18px 40px;color:#fff;max-width:640px;margin:0 auto}
+header h1{margin:0;font-size:1.5rem}header p{margin:4px 0 0;opacity:.9;font-size:.95rem}
+header .faixa{height:4px;width:90px;margin-top:12px;border-radius:2px;background:linear-gradient(90deg,#ffd400 50%,#1e5bd6 50%)}
+main{max-width:640px;margin:-20px auto 0;padding:0 14px 30px}
+.card{background:var(--card);border:1px solid var(--bd);border-radius:14px;padding:14px;margin-bottom:12px;box-shadow:0 4px 14px rgba(0,0,0,.08)}
+label{display:block;font-size:.85rem;color:var(--mut);margin:10px 0 4px}
+input,select,textarea{width:100%;padding:11px;border:1px solid var(--bd);border-radius:9px;background:transparent;color:var(--tx);font:inherit}
+.row{display:flex;gap:8px}.row>*{flex:1}
+button,.btn{display:inline-block;padding:12px 14px;border:0;border-radius:10px;background:var(--pri);color:#fff;font:inherit;font-weight:700;text-decoration:none;cursor:pointer;text-align:center}
+@media (prefers-color-scheme:dark){button,.btn{color:#06130d}}
+button.sec,.btn.sec{background:transparent;color:var(--pri);border:1px solid var(--pri)}
+button.dan{background:transparent;color:var(--dan);border:1px solid var(--dan)}
+.big{width:100%;padding:22px 14px;font-size:1.15rem}
+.acts{display:flex;gap:8px;flex-wrap:wrap;margin-top:10px}
+#prev{max-width:100%;border-radius:10px;margin-top:10px;display:none;border:1px solid var(--bd)}
+.item h3{margin:0 0 4px;font-size:1.05rem}.mut{color:var(--mut);font-size:.9rem}
+.item img{max-width:100%;border-radius:10px;margin-top:8px;border:1px solid var(--bd)}
+.empty{text-align:center;color:var(--mut);padding:20px}
+details summary{cursor:pointer;font-weight:600;color:var(--pri);margin-top:12px}
+.toast{position:fixed;left:50%;bottom:calc(20px + env(safe-area-inset-bottom,0px));transform:translateX(-50%);background:#14211b;color:#fff;padding:10px 16px;border-radius:20px;display:none;z-index:9}
+@media print{
+ body{background:#fff!important;color:#000}header,main>*:not(#list){display:none!important}
+ main{margin:0}.acts{display:none}.card{box-shadow:none;border:1px solid #999;break-inside:avoid;background:#fff}
+ .item.noprint{display:none}
+}
+</style>
+</head>
+<body>
+<header>
+ <h1>🗳️ Meus Comprovantes</h1>
+ <p>Fotografe, guarde e imprima quando precisar.</p>
+ <div class="faixa"></div>
+</header>
+<main>
+
+<div class="card">
+ <button class="big" id="btnFoto">📷 Fotografar comprovante</button>
+ <input id="foto" type="file" accept="image/*" capture="environment" style="display:none">
+ <img id="prev" alt="Prévia do comprovante">
+ <label>Eleição</label>
+ <input id="eleicao" value="Eleições 2026 - 1º turno">
+ <div class="row">
+  <div><label>Data</label><input id="data" type="date"></div>
+  <div><label>Turno</label><select id="turno"><option>1º turno</option><option>2º turno</option></select></div>
+ </div>
+ <details>
+  <summary>Mais detalhes (opcional)</summary>
+  <div class="row">
+   <div><label>Zona</label><input id="zona" inputmode="numeric"></div>
+   <div><label>Seção</label><input id="secao" inputmode="numeric"></div>
+  </div>
+  <label>Local de votação</label>
+  <input id="local" placeholder="Escola, endereço...">
+  <label>Observações</label>
+  <textarea id="obs" rows="2"></textarea>
+ </details>
+ <div class="acts"><button id="salvar" style="flex:1">Salvar comprovante</button></div>
+</div>
+
+<div class="card">
+ <b>Justiça Eleitoral (TRE/TSE)</b>
+ <label>Número do título (fica só no seu celular)</label>
+ <input id="titulo" inputmode="numeric" placeholder="Digite uma vez só">
+ <div class="acts">
+  <button id="btnTre" style="flex:1">Copiar título e abrir consulta</button>
+ </div>
+ <p class="mut" style="margin:8px 0 0">Na página do TRE, é só colar o número e confirmar.</p>
+</div>
+
+<div class="acts" style="margin:0 0 12px">
+ <select id="selImp" style="flex:1 1 100%"></select>
+ <button class="sec" id="btnImp" style="flex:1 1 100%">🖨️ Imprimir</button>
+ <button class="sec" id="bkp">⬇️ Backup</button>
+ <button class="sec" id="rest">⬆️ Restaurar</button>
+ <input id="restf" type="file" accept="application/json" style="display:none">
+</div>
+
+<div id="list"></div>
+
+<div class="card">
+ <b>Aplicativo</b>
+ <div class="acts">
+  <button class="sec" id="btnShare" style="flex:1">📤 Compartilhar aplicativo</button>
+  <button class="sec" id="btnUpd" style="flex:1">🔄 Atualizar aplicativo</button>
+  <button class="sec" id="btnAtalho" style="flex:1 1 100%">📲 Criar atalho na tela inicial</button>
+ </div>
+ <div id="ajuda" class="mut" style="display:none;margin-top:10px">
+  <b>Para criar o atalho:</b><br>
+  1. Toque nos 3 pontinhos do Chrome (canto de cima).<br>
+  2. Toque em <b>Adicionar à tela inicial</b> (ou <b>Instalar aplicativo</b>).<br>
+  3. Toque em <b>Criar atalho</b> e confirme.
+ </div>
+ <p class="mut" style="margin:8px 0 0">Atualizar não apaga seus comprovantes.</p>
+</div>
+<p id="copy" style="text-align:center;color:#fff;opacity:.85;font-size:.85rem;margin:6px 0 0;text-shadow:0 1px 3px rgba(0,0,0,.6)"></p>
+</main>
+<div class="toast" id="toast"></div>
+
+<script>
+(function(){
+ var AUTOR='Luis Ricardo de Almeida Siqueira';
+ var KEY='comprovantes-votacao',TK='titulo-eleitor',items=[],foto='';
+ document.getElementById('copy').textContent='© '+new Date().getFullYear()+' '+AUTOR+' · Todos os direitos reservados';
+ function $(id){return document.getElementById(id)}
+ function esc(s){return String(s||'').replace(/[&<>"]/g,function(c){return{'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]})}
+ function fmt(d){if(!d)return'';var p=d.split('-');return p[2]+'/'+p[1]+'/'+p[0]}
+ function toast(t){var e=$('toast');e.textContent=t;e.style.display='block';setTimeout(function(){e.style.display='none'},2200)}
+ function load(){try{items=JSON.parse(localStorage.getItem(KEY)||'[]')}catch(e){items=[]}}
+ function save(){try{localStorage.setItem(KEY,JSON.stringify(items));return true}catch(e){alert('Sem espaço. Faça um backup e apague fotos antigas.');return false}}
+ $('data').value=new Date().toISOString().slice(0,10);
+ try{$('titulo').value=localStorage.getItem(TK)||''}catch(e){}
+
+ $('btnFoto').onclick=function(){$('foto').click()};
+ $('foto').onchange=function(e){
+  var f=e.target.files[0];if(!f)return;
+  var r=new FileReader();
+  r.onload=function(){var im=new Image();im.onload=function(){
+   var s=Math.min(1,1000/Math.max(im.width,im.height)),c=document.createElement('canvas');
+   c.width=im.width*s;c.height=im.height*s;c.getContext('2d').drawImage(im,0,0,c.width,c.height);
+   foto=c.toDataURL('image/jpeg',0.7);$('prev').src=foto;$('prev').style.display='block';
+   $('btnFoto').textContent='📷 Trocar foto'};im.src=r.result};
+  r.readAsDataURL(f);
+ };
+
+ $('salvar').onclick=function(){
+  if(!foto&&!confirm('Salvar sem foto do comprovante?'))return;
+  items.unshift({id:Date.now(),eleicao:$('eleicao').value,data:$('data').value,turno:$('turno').value,zona:$('zona').value,secao:$('secao').value,local:$('local').value,obs:$('obs').value,foto:foto});
+  if(!save()){items.shift();return}
+  foto='';$('foto').value='';$('prev').style.display='none';$('btnFoto').textContent='📷 Fotografar comprovante';
+  ['zona','secao','local','obs'].forEach(function(k){$(k).value=''});
+  render();toast('Comprovante salvo ✓');
+ };
+
+ $('titulo').oninput=function(){try{localStorage.setItem(TK,$('titulo').value)}catch(e){}};
+ $('btnTre').onclick=function(){
+  var t=$('titulo').value.trim();
+  function abrir(){window.open('https://www.tse.jus.br/servicos-eleitorais','_blank','noopener')}
+  if(!t){abrir();return}
+  if(navigator.clipboard&&navigator.clipboard.writeText){
+   navigator.clipboard.writeText(t).then(function(){toast('Título copiado ✓')},function(){toast('Copie o título manualmente')});
+  }else{toast('Copie o título manualmente')}
+  abrir();
+ };
+
+ function render(){
+  var l=$('list'),s=$('selImp'),cur=s.value,es=[];
+  items.forEach(function(i){if(es.indexOf(i.eleicao)<0)es.push(i.eleicao)});
+  s.innerHTML='<option value="">Todas as eleições</option>'+es.map(function(e){return '<option value="'+esc(e)+'">'+esc(e)+'</option>'}).join('');
+  if(es.indexOf(cur)>=0)s.value=cur;
+  if(!items.length){l.innerHTML='<div class="empty">Nenhum comprovante guardado ainda.</div>';return}
+  l.innerHTML=items.map(function(i){
+   return '<div class="card item" id="i'+i.id+'" data-e="'+esc(i.eleicao)+'"><h3>'+esc(i.eleicao)+'</h3>'
+   +'<div class="mut">'+fmt(i.data)+' · '+esc(i.turno)+(i.zona?' · Zona '+esc(i.zona):'')+(i.secao?' · Seção '+esc(i.secao):'')+'</div>'
+   +(i.local?'<div>'+esc(i.local)+'</div>':'')
+   +(i.obs?'<div class="mut">'+esc(i.obs)+'</div>':'')
+   +(i.foto?'<img src="'+i.foto+'" alt="Comprovante">':'')
+   +'<div class="acts"><button class="sec" data-p="'+i.id+'">🖨️ Imprimir este</button><button class="dan" data-d="'+i.id+'">Excluir</button></div></div>';
+  }).join('');
+ }
+ $('list').onclick=function(e){
+  var d=e.target.getAttribute('data-d'),p=e.target.getAttribute('data-p');
+  if(d&&confirm('Excluir este comprovante?')){items=items.filter(function(i){return String(i.id)!==d});save();render()}
+  if(p){var els=document.querySelectorAll('.item');
+   els.forEach(function(el){if(el.id!=='i'+p)el.classList.add('noprint')});
+   window.print();
+   els.forEach(function(el){el.classList.remove('noprint')});}
+ };
+ $('bkp').onclick=function(){
+  var b=new Blob([JSON.stringify(items)],{type:'application/json'}),a=document.createElement('a');
+  a.href=URL.createObjectURL(b);a.download='comprovantes-votacao.json';document.body.appendChild(a);a.click();a.remove();
+ };
+ $('rest').onclick=function(){$('restf').click()};
+ $('restf').onchange=function(e){
+  var f=e.target.files[0];if(!f)return;var r=new FileReader();
+  r.onload=function(){try{var x=JSON.parse(r.result);if(Array.isArray(x)){items=x;save();render();toast('Backup restaurado ✓')}}catch(err){alert('Arquivo inválido')}};
+  r.readAsText(f);
+ };
+ $('btnShare').onclick=function(){
+  var url=location.href.split('?')[0].split('#')[0];
+  var dados={title:'Meus Comprovantes de Votação',text:'Guarde e imprima seus comprovantes de votação:',url:url};
+  if(navigator.share){navigator.share(dados).catch(function(){})}
+  else if(navigator.clipboard&&navigator.clipboard.writeText){navigator.clipboard.writeText(url).then(function(){toast('Link copiado ✓')},function(){prompt('Copie o link:',url)})}
+  else{prompt('Copie o link:',url)}
+ };
+ $('btnImp').onclick=function(){
+  var v=$('selImp').value,els=document.querySelectorAll('.item');
+  els.forEach(function(el){if(v&&el.getAttribute('data-e')!==v)el.classList.add('noprint')});
+  window.print();
+  els.forEach(function(el){el.classList.remove('noprint')});
+ };
+ var dp=null;
+ window.addEventListener('beforeinstallprompt',function(e){e.preventDefault();dp=e});
+ window.addEventListener('appinstalled',function(){toast('Aplicativo instalado ✓')});
+ $('btnAtalho').onclick=function(){
+  if(dp){dp.prompt();dp=null}
+  else{var a=$('ajuda');a.style.display=a.style.display==='none'?'block':'none'}
+ };
+ $('btnUpd').onclick=function(){
+  toast('Atualizando...');
+  var fim=function(){location.href=location.href.split('?')[0].split('#')[0]+'?v='+Date.now()};
+  var tarefas=[];
+  try{if(window.caches)tarefas.push(caches.keys().then(function(ks){return Promise.all(ks.map(function(k){return caches.delete(k)}))}))}catch(e){}
+  try{if(navigator.serviceWorker)tarefas.push(navigator.serviceWorker.getRegistrations().then(function(rs){return Promise.all(rs.map(function(r){return r.unregister()}))}))}catch(e){}
+  Promise.all(tarefas).then(fim,fim);
+ };
+ load();render();
+})();
+</script>
+</body>
+</html>
