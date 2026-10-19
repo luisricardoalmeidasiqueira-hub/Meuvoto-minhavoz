@@ -55,6 +55,27 @@ details summary{cursor:pointer;font-weight:600;color:var(--pri);margin-top:10px}
 @media print{#crop{display:none!important}}
 #edit{position:fixed;inset:0;background:rgba(0,0,0,.7);z-index:19;display:none;align-items:center;justify-content:center;padding:env(safe-area-inset-top,0px) 10px env(safe-area-inset-bottom,0px)}
 @media print{#edit{display:none!important}}
+main{max-width:560px;padding:0 10px 24px}
+header{padding:12px 14px 26px}header h1{font-size:1.05rem}header p{font-size:.8rem;margin:2px 0 0}header .faixa{margin-top:8px}
+.card{padding:9px 10px;margin-bottom:8px}
+label{margin:6px 0 2px;font-size:.74rem}
+input,select,textarea{padding:7px 9px}
+button,.btn{padding:8px 10px;font-size:.85rem}
+.big{padding:12px 10px;font-size:.95rem}
+.acts{gap:6px;margin-top:6px}
+#prev{max-height:180px;width:auto;max-width:100%;margin-top:8px}
+details.card>summary{margin:0;color:var(--tx);font-weight:700;cursor:pointer;list-style:none;display:flex;justify-content:space-between;align-items:center}
+details.card>summary::-webkit-details-marker{display:none}
+details.card>summary::after{content:'▾';color:var(--mut)}
+details.card[open]>summary::after{content:'▴'}
+.det-body{margin-top:8px}
+.item .top{display:flex;gap:10px;align-items:flex-start}
+.item .top img{width:96px;height:72px;object-fit:cover;border-radius:8px;margin:0;border:1px solid var(--bd);cursor:zoom-in;flex:0 0 auto}
+.item .info{flex:1;min-width:0}
+.item .acts button{padding:6px 8px;font-size:.78rem}
+#zoom{position:fixed;inset:0;background:rgba(0,0,0,.94);z-index:25;display:none;align-items:center;justify-content:center}
+#zoom img{max-width:96vw;max-height:92vh;border-radius:6px}
+@media print{#zoom{display:none!important}.item .top{display:block}.item .top img{width:100%;height:auto;max-height:none;object-fit:contain}}
 </style>
 </head>
 <body>
@@ -70,13 +91,14 @@ details summary{cursor:pointer;font-weight:600;color:var(--pri);margin-top:10px}
  <input id="foto" type="file" accept="image/*" capture="environment" style="display:none">
  <img id="prev" alt="Prévia do comprovante">
  <button class="sec" id="btnRec" style="display:none;margin-top:8px">✂️ Recortar de novo</button>
+ <button class="sec" id="btnLer" style="display:none;margin-top:8px">🔎 Ler informações</button>
  <label>Eleição</label>
  <input id="eleicao" value="Eleições 2026 - 1º turno">
  <div class="row">
   <div><label>Data</label><input id="data" type="date"></div>
   <div><label>Turno</label><select id="turno"><option>1º turno</option><option>2º turno</option></select></div>
  </div>
- <details>
+ <details id="maisDet">
   <summary>Mais detalhes (opcional)</summary>
   <div class="row">
    <div><label>Zona</label><input id="zona" inputmode="numeric"></div>
@@ -90,22 +112,28 @@ details summary{cursor:pointer;font-weight:600;color:var(--pri);margin-top:10px}
  <div class="acts"><button id="salvar" style="flex:1">Salvar comprovante</button></div>
 </div>
 
-<div class="card">
- <b>Justiça Eleitoral (TRE/TSE)</b>
+<details class="card"><summary>🪪 Meu título e TRE/TSE</summary><div class="det-body">
  <label>Número do título (fica só no seu celular)</label>
  <div class="row" style="align-items:center">
   <input id="titulo" inputmode="numeric" autocomplete="off" autocapitalize="off" spellcheck="false" placeholder="Digite uma vez só">
   <button class="sec" id="btnOlho" style="flex:0 0 auto" aria-label="Mostrar ou esconder o título">🔒</button>
  </div>
+ <div style="margin-top:8px">
+  <img id="tFoto" alt="Foto do título" style="display:none;max-width:100%;max-height:170px;border-radius:8px;border:1px solid var(--bd);cursor:zoom-in">
+  <div id="tFotoMsg" class="mut"></div>
+  <div class="acts"><button class="sec" id="btnTFoto" style="flex:1">📷 Foto do título</button><button class="dan" id="btnTDel" style="display:none">Remover</button></div>
+  <input id="tFile" type="file" accept="image/*" style="display:none">
+ </div>
  <div class="acts">
   <button id="btnTre" style="flex:1">Copiar título e abrir consulta</button>
  </div>
  <p class="mut" style="margin:8px 0 0">Na página do TRE, é só colar o número e confirmar.</p>
-</div>
+</div></details>
 
-<div class="acts" style="margin:0 0 12px">
+<div class="acts" style="margin:0 0 8px">
  <select id="selImp" style="flex:1 1 100%"></select>
- <button class="sec" id="btnImp" style="flex:1 1 100%">🖨️ Imprimir</button>
+ <button class="sec" id="btnImp" style="flex:1">🖨️ Imprimir</button>
+ <button class="sec" id="btnPdf" style="flex:1">📄 Salvar PDF</button>
  <button class="sec" id="bkp">⬇️ Backup</button>
  <button class="sec" id="rest">⬆️ Restaurar</button>
  <input id="restf" type="file" accept="application/json" style="display:none">
@@ -113,13 +141,19 @@ details summary{cursor:pointer;font-weight:600;color:var(--pri);margin-top:10px}
 
 <div id="list"></div>
 
-<div class="card">
- <b>🎨 Cor do app</b>
- <div class="sw" id="sw"></div>
-</div>
+<details class="card"><summary>🎨 Cor do app</summary><div class="det-body"><div class="sw" id="sw"></div></div></details>
 
-<div class="card">
- <b>Aplicativo</b>
+<details class="card"><summary>🤖 Leitor IA (Google)</summary><div class="det-body">
+ <label>Chave da IA do Google</label>
+ <input id="gKey" type="password" autocomplete="off" autocapitalize="off" spellcheck="false" placeholder="Cole sua chave aqui">
+ <label>Modelo (deixe vazio para o padrão)</label>
+ <input id="gModel" autocomplete="off" autocapitalize="off" spellcheck="false" placeholder="gemini-3.8-flash">
+ <div class="acts"><button id="gSave" style="flex:1">Salvar</button><button class="dan" id="gDel">Apagar chave</button></div>
+ <p class="mut" id="gMsg" style="margin:8px 0 0"></p>
+ <p class="mut" style="margin:6px 0 0">A chave fica só neste aparelho. Com a chave ligada, a foto do comprovante é enviada ao Google para ser lida.</p>
+</div></details>
+
+<details class="card"><summary>Aplicativo</summary><div class="det-body">
  <div class="acts">
   <button class="sec" id="btnShare" style="flex:1">📤 Compartilhar aplicativo</button>
   <button class="sec" id="btnUpd" style="flex:1">🔄 Atualizar aplicativo</button>
@@ -132,9 +166,10 @@ details summary{cursor:pointer;font-weight:600;color:var(--pri);margin-top:10px}
   3. Toque em <b>Criar atalho</b> e confirme.
  </div>
  <p class="mut" style="margin:8px 0 0">Atualizar não apaga seus comprovantes.</p>
-</div>
+</div></details>
 <p id="copy" style="text-align:center;color:#fff;opacity:.85;font-size:.85rem;margin:6px 0 0;text-shadow:0 1px 3px rgba(0,0,0,.6)"></p>
 </main>
+<div id="zoom"><img id="zimg" alt="Comprovante"></div>
 <div id="edit">
  <div class="card" style="width:100%;max-width:560px;max-height:92vh;overflow:auto;margin:0">
   <b>✏️ Editar comprovante</b>
@@ -149,6 +184,7 @@ details summary{cursor:pointer;font-weight:600;color:var(--pri);margin-top:10px}
   </div>
   <label>Local de votação</label><input id="eLocal">
   <label>Observações</label><textarea id="eObs" rows="2"></textarea>
+  <div class="acts"><button class="sec" id="eLer" style="flex:1 1 100%">🔎 Preencher lendo a foto</button></div>
   <div class="acts"><button id="eSave" style="flex:1">Salvar alterações</button><button class="sec" id="eCancel">Cancelar</button></div>
  </div>
 </div>
@@ -171,7 +207,7 @@ details summary{cursor:pointer;font-weight:600;color:var(--pri);margin-top:10px}
  function $(id){return document.getElementById(id)}
  function esc(s){return String(s||'').replace(/[&<>"]/g,function(c){return{'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]})}
  function fmt(d){if(!d)return'';var p=d.split('-');return p[2]+'/'+p[1]+'/'+p[0]}
- function toast(t){var e=$('toast');e.textContent=t;e.style.display='block';setTimeout(function(){e.style.display='none'},2200)}
+ var tt;function toast(t,ms){var e=$('toast');e.textContent=t;e.style.display='block';clearTimeout(tt);tt=setTimeout(function(){e.style.display='none'},ms||2200)}
  function load(){try{items=JSON.parse(localStorage.getItem(KEY)||'[]')}catch(e){items=[]}}
  function save(){try{localStorage.setItem(KEY,JSON.stringify(items));return true}catch(e){alert('Sem espaço. Faça um backup e apague fotos antigas.');return false}}
  $('data').value=new Date().toISOString().slice(0,10);
@@ -240,7 +276,7 @@ details summary{cursor:pointer;font-weight:600;color:var(--pri);margin-top:10px}
  };
  $('cCancel').onclick=closeCrop;
 
- function setFoto(d){foto=d;$('prev').src=d;$('prev').style.display='block';$('btnRec').style.display='inline-block';$('btnFoto').textContent='📷 Trocar foto'}
+ function setFoto(d){foto=d;$('prev').src=d;$('prev').style.display='block';$('btnRec').style.display='inline-block';$('btnLer').style.display='inline-block';$('btnFoto').textContent='📷 Trocar foto'}
  $('btnRec').onclick=function(){if(fotoOrig)openCrop(fotoOrig,setFoto)};
  $('foto').onchange=function(e){
   var f=e.target.files[0];if(!f)return;
@@ -256,7 +292,7 @@ details summary{cursor:pointer;font-weight:600;color:var(--pri);margin-top:10px}
   if(!foto&&!confirm('Salvar sem foto do comprovante?'))return;
   items.unshift({id:Date.now(),eleicao:$('eleicao').value,data:$('data').value,turno:$('turno').value,zona:$('zona').value,secao:$('secao').value,local:$('local').value,obs:$('obs').value,foto:foto});
   if(!save()){items.shift();return}
-  foto='';$('foto').value='';$('prev').style.display='none';$('btnFoto').textContent='📷 Fotografar comprovante';fotoOrig='';$('btnRec').style.display='none';
+  foto='';$('foto').value='';$('prev').style.display='none';$('btnFoto').textContent='📷 Fotografar comprovante';fotoOrig='';$('btnRec').style.display='none';$('btnLer').style.display='none';
   ['zona','secao','local','obs'].forEach(function(k){$(k).value=''});
   render();toast('Comprovante salvo ✓');
  };
@@ -279,12 +315,12 @@ details summary{cursor:pointer;font-weight:600;color:var(--pri);margin-top:10px}
   if(es.indexOf(cur)>=0)s.value=cur;
   if(!items.length){l.innerHTML='<div class="empty">Nenhum comprovante guardado ainda.</div>';return}
   l.innerHTML=items.map(function(i){
-   return '<div class="card item" id="i'+i.id+'" data-e="'+esc(i.eleicao)+'"><h3>'+esc(i.eleicao)+'</h3>'
+   return '<div class="card item" id="i'+i.id+'" data-e="'+esc(i.eleicao)+'"><div class="top">'+(i.foto?'<img src="'+i.foto+'" alt="Comprovante">':'')+'<div class="info"><h3>'+esc(i.eleicao)+'</h3>'
    +'<div class="mut">'+fmt(i.data)+' · '+esc(i.turno)+(i.zona?' · Zona '+esc(i.zona):'')+(i.secao?' · Seção '+esc(i.secao):'')+'</div>'
    +(i.local?'<div>'+esc(i.local)+'</div>':'')
    +(i.obs?'<div class="mut">'+esc(i.obs)+'</div>':'')
-   +(i.foto?'<img src="'+i.foto+'" alt="Comprovante">':'')
-   +'<div class="acts"><button data-s="'+i.id+'">📤 Compartilhar</button><button class="sec" data-ed="'+i.id+'">✏️ Editar</button>'+(i.foto?'<button class="sec" data-c="'+i.id+'">✂️ Recortar</button>':'')+'<button class="sec" data-p="'+i.id+'">🖨️ Imprimir este</button><button class="dan" data-d="'+i.id+'">Excluir</button></div></div>';
+   +'</div></div>'
+   +'<div class="acts"><button data-s="'+i.id+'">📤 Compartilhar</button><button class="sec" data-pdf="'+i.id+'">📄 PDF</button><button class="sec" data-ed="'+i.id+'">✏️ Editar</button>'+(i.foto?'<button class="sec" data-c="'+i.id+'">✂️ Recortar</button>':'')+'<button class="sec" data-p="'+i.id+'">🖨️ Imprimir este</button><button class="dan" data-d="'+i.id+'">Excluir</button></div></div>';
   }).join('');
  }
   function compartilha(it){
@@ -301,7 +337,131 @@ details summary{cursor:pointer;font-weight:600;color:var(--pri);margin-top:10px}
   if(it.foto){var a=document.createElement('a');a.href=it.foto;a.download='comprovante-votacao.jpg';document.body.appendChild(a);a.click();a.remove();toast('Foto baixada ✓');return}
   if(navigator.clipboard&&navigator.clipboard.writeText){navigator.clipboard.writeText(txt).then(function(){toast('Texto copiado ✓')})}
  }
-  var editId=null;
+  var libs={};
+ function carrega(src){return new Promise(function(ok,err){var s=document.createElement('script');s.src=src;s.onload=ok;s.onerror=function(){err(new Error('load'))};document.head.appendChild(s)})}
+ function usa(nome,src,chk){
+  if(window[chk])return Promise.resolve();
+  if(!libs[nome])libs[nome]=carrega(src).catch(function(e){libs[nome]=null;throw e});
+  return libs[nome];
+ }
+ function lerComprovante(src){
+  return usa('tess','https://cdn.jsdelivr.net/npm/tesseract.js@5.1.1/dist/tesseract.min.js','Tesseract')
+   .then(function(){return Tesseract.recognize(src,'por')})
+   .then(function(r){return r.data.text});
+ }
+ function parseComp(txt){
+  var u=String(txt||'').replace(/\r/g,'').toUpperCase(),o={},m;
+  m=u.match(/DATA\s*:?\s*(\d{2})\s*[\/\.\-]\s*(\d{2})\s*[\/\.\-]\s*(\d{4})/)||u.match(/(\d{2})\s*\/\s*(\d{2})\s*\/\s*(\d{4})/);
+  if(m)o.data=m[3]+'-'+m[2]+'-'+m[1];
+  m=u.match(/([12])\s*[ºO°]?\s*TURNO/);if(m)o.turno=m[1]+'º turno';
+  m=u.match(/ZONA\s*:?\s*(\d{1,4})/);if(m)o.zona=String(parseInt(m[1],10));
+  m=u.match(/SE[CÇG][ÃA]O\s*:?\s*(\d{1,4})/);if(m)o.secao=String(parseInt(m[1],10));
+  m=u.match(/T[IÍ]TULO[^0-9]{0,25}((?:\d\s?){12})/);if(m)o.titulo=m[1].replace(/\D/g,'');
+  var tp=u.match(/GERAIS|MUNICIPAIS|SUPLEMENTARES|ESTADUAIS/);
+  if(tp){var ano=o.data?o.data.slice(0,4):'';o.eleicao='Eleições '+tp[0].charAt(0)+tp[0].slice(1).toLowerCase()+(ano?' '+ano:'')+(o.turno?' - '+o.turno:'')}
+  return o;
+ }
+ function preencheForm(o,ids){
+  var n=0;
+  ['eleicao','data','turno','zona','secao','local'].forEach(function(k){if(o[k]&&ids[k]){$(ids[k]).value=o[k];n++}});
+  return n;
+ }
+ var GPROMPT='Leia este comprovante de votação brasileiro (foto) e responda SOMENTE com um JSON com estas chaves: eleicao (ex: "Eleições Gerais 2026 - 1º turno"), data (AAAA-MM-DD), turno ("1º turno" ou "2º turno"), zona (só números), secao (só números), local (local de votação, se houver), titulo (número do título de eleitor, só os 12 dígitos, se houver). Use null para o que não aparecer. Não invente nada.';
+ function gLimpa(o){
+  var r={};o=o||{};
+  if(typeof o.eleicao==='string'&&o.eleicao.trim())r.eleicao=o.eleicao.trim();
+  if(typeof o.data==='string'&&/^\d{4}-\d{2}-\d{2}$/.test(o.data.trim()))r.data=o.data.trim();
+  var t=String(o.turno||'').match(/([12])/);if(t)r.turno=t[1]+'º turno';
+  var z=String(o.zona||'').match(/\d+/);if(z)r.zona=String(parseInt(z[0],10));
+  var s=String(o.secao||'').match(/\d+/);if(s)r.secao=String(parseInt(s[0],10));
+  if(typeof o.local==='string'&&o.local.trim())r.local=o.local.trim();
+  var ti=String(o.titulo||'').replace(/\D/g,'');if(ti.length===12)r.titulo=ti;
+  return r;
+ }
+ function lerGemini(src,key){
+  var model='gemini-3.8-flash';try{model=localStorage.getItem('gemini-model')||model}catch(e){}
+  var b64=src.split(',')[1];
+  return fetch('https://generativelanguage.googleapis.com/v1beta/models/'+encodeURIComponent(model)+':generateContent',{
+   method:'POST',headers:{'Content-Type':'application/json','x-goog-api-key':key},
+   body:JSON.stringify({contents:[{parts:[{text:GPROMPT},{inline_data:{mime_type:'image/jpeg',data:b64}}]}],generationConfig:{responseMimeType:'application/json',temperature:0}})
+  }).then(function(r){
+   if(!r.ok)return r.text().then(function(t){var m='erro '+r.status;try{m=JSON.parse(t).error.message||m}catch(e){}throw new Error(String(m).slice(0,90))});
+   return r.json();
+  }).then(function(j){
+   var t=j.candidates[0].content.parts.map(function(p){return p.text||''}).join('').replace(/```json|```/g,'').trim();
+   return gLimpa(JSON.parse(t));
+  });
+ }
+ function lerInfo(src){
+  var key='';try{key=localStorage.getItem('gemini-key')||''}catch(e){}
+  if(!key)return lerComprovante(src).then(parseComp);
+  return lerGemini(src,key).catch(function(err){
+   toast('IA do Google falhou: '+(err.message||'erro')+'. Usando o leitor do aparelho...',4000);
+   return lerComprovante(src).then(parseComp);
+  });
+ }
+ function gStatus(){
+  var k='',m='';try{k=localStorage.getItem('gemini-key')||'';m=localStorage.getItem('gemini-model')||''}catch(e){}
+  $('gKey').value='';$('gKey').placeholder=k?'Chave salva ●●●●●●●●':'Cole sua chave aqui';
+  $('gModel').value=m;
+  $('gMsg').textContent=k?'✅ IA do Google ativada.':'Sem chave: usa o leitor do aparelho.';
+ }
+ $('gSave').onclick=function(){
+  var k=$('gKey').value.trim(),m=$('gModel').value.trim();
+  try{
+   if(k)localStorage.setItem('gemini-key',k);
+   if(m)localStorage.setItem('gemini-model',m);else localStorage.removeItem('gemini-model');
+  }catch(e){toast('Não consegui salvar')}
+  gStatus();toast('Salvo ✓');
+ };
+ $('gDel').onclick=function(){if(confirm('Apagar a chave deste aparelho?')){try{localStorage.removeItem('gemini-key')}catch(e){}gStatus()}};
+ gStatus();
+ function leEPreenche(src,ids,extra){
+  toast('Lendo o comprovante... na 1ª vez demora mais',90000);
+  lerInfo(src).then(function(o){
+   var n=preencheForm(o,ids);
+   if(extra)extra(o);
+   toast(n?'Li '+n+' informações. Confira antes de salvar ✓':'Não consegui ler. Recorte só o papel ou preencha à mão',4500);
+  }).catch(function(){toast('Precisa de internet na 1ª vez para ler a foto',4500)});
+ }
+ $('btnLer').onclick=function(){
+  if(!foto)return;
+  leEPreenche(foto,{eleicao:'eleicao',data:'data',turno:'turno',zona:'zona',secao:'secao',local:'local'},function(o){
+   if(o.titulo&&!$('titulo').value){$('titulo').value=o.titulo;try{localStorage.setItem(TK,o.titulo)}catch(e){}}
+   var d=$('maisDet');if(d)d.open=true;
+  });
+ };
+ function gerarPdf(lista,nome){
+  if(!lista.length){toast('Nenhum comprovante para o PDF');return}
+  toast('Gerando PDF...',60000);
+  usa('jspdf','https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js','jspdf').then(function(){
+   var doc=new window.jspdf.jsPDF({unit:'mm',format:'a4'});
+   lista.forEach(function(it,idx){
+    if(idx)doc.addPage();
+    doc.setFontSize(14);doc.text(String(it.eleicao||'Comprovante de votação'),15,18);
+    doc.setFontSize(10);
+    var l2=fmt(it.data)+' - '+(it.turno||'')+(it.zona?' - Zona '+it.zona:'')+(it.secao?' - Seção '+it.secao:'');
+    doc.text(l2,15,25);
+    var y=31;
+    if(it.local){doc.text(String(it.local),15,y);y+=6}
+    if(it.obs){doc.text(doc.splitTextToSize(String(it.obs),180),15,y);y+=6}
+    if(it.foto){
+     var p=doc.getImageProperties(it.foto),mw=180,mh=297-y-15,s=Math.min(mw/p.width,mh/p.height);
+     doc.addImage(it.foto,'JPEG',15,y+3,p.width*s,p.height*s);
+    }
+   });
+   var blob=doc.output('blob'),a=document.createElement('a');
+   a.href=URL.createObjectURL(blob);a.download=nome;document.body.appendChild(a);a.click();a.remove();
+   setTimeout(function(){URL.revokeObjectURL(a.href)},4000);
+   toast('PDF salvo ✓ (veja em Downloads)',3500);
+  }).catch(function(){toast('Precisa de internet na 1ª vez para gerar o PDF',4500)});
+ }
+ $('btnPdf').onclick=function(){
+  var v=$('selImp').value;
+  var lista=items.filter(function(i){return !v||i.eleicao===v});
+  gerarPdf(lista,'comprovantes-votacao.pdf');
+ };
+ var editId=null;
  function openEdit(it){
   editId=it.id;
   $('eEleicao').value=it.eleicao||'';$('eData').value=it.data||'';$('eTurno').value=it.turno||'1º turno';
@@ -317,12 +477,21 @@ details summary{cursor:pointer;font-weight:600;color:var(--pri);margin-top:10px}
   if(!save()){var o=JSON.parse(bak);for(var k in o)it[k]=o[k];return}
   $('edit').style.display='none';editId=null;render();toast('Alterações salvas ✓');
  };
+ $('zoom').onclick=function(){$('zoom').style.display='none'};
+ $('eLer').onclick=function(){
+  var it=items.filter(function(i){return i.id===editId})[0];
+  if(!it||!it.foto){toast('Este comprovante não tem foto');return}
+  leEPreenche(it.foto,{eleicao:'eEleicao',data:'eData',turno:'eTurno',zona:'eZona',secao:'eSecao',local:'eLocal'});
+ };
  $('list').onclick=function(e){
+  if(e.target.tagName==='IMG'){$('zimg').src=e.target.src;$('zoom').style.display='flex';return}
   var d=e.target.getAttribute('data-d'),p=e.target.getAttribute('data-p');
   var s=e.target.getAttribute('data-s');
   var cc=e.target.getAttribute('data-c');
   var ed=e.target.getAttribute('data-ed');
   if(ed){var it3=items.filter(function(i){return String(i.id)===ed})[0];if(it3)openEdit(it3)}
+  var pf=e.target.getAttribute('data-pdf');
+  if(pf){var it4=items.filter(function(i){return String(i.id)===pf})[0];if(it4)gerarPdf([it4],'comprovante-'+(it4.data||'votacao')+'.pdf')}
   if(cc){var it2=items.filter(function(i){return String(i.id)===cc})[0];if(it2)openCrop(it2.foto,function(res){var old=it2.foto;it2.foto=res;if(save())render();else it2.foto=old})}
   if(s){var it=items.filter(function(i){return String(i.id)===s})[0];if(it)compartilha(it)}
   if(d&&confirm('Excluir este comprovante?')){items=items.filter(function(i){return String(i.id)!==d});save();render()}
@@ -381,11 +550,35 @@ details summary{cursor:pointer;font-weight:600;color:var(--pri);margin-top:10px}
  Object.keys(TEMAS).forEach(function(k){var b=document.createElement('button');b.setAttribute('data-k',k);b.setAttribute('aria-label',TEMAS[k][2]);b.style.background=TEMAS[k][0];b.onclick=function(){aplicaTema(k)};sw.appendChild(b)});
  var tk='azul';try{tk=localStorage.getItem('tema-app')||'azul'}catch(e){}
  aplicaTema(tk);
+ var TF='titulo-foto';
+ function tFotoRender(){
+  var d='';try{d=localStorage.getItem(TF)||''}catch(e){}
+  var img=$('tFoto'),msg=$('tFotoMsg');
+  if(!d){img.style.display='none';msg.textContent='Nenhuma foto do título guardada.';$('btnTDel').style.display='none';$('btnTFoto').textContent='📷 Foto do título';return}
+  $('btnTDel').style.display='inline-block';$('btnTFoto').textContent='📷 Trocar foto';
+  if(tOculto){img.style.display='none';msg.textContent='🔒 Foto escondida. Toque no cadeado para ver.'}
+  else{img.src=d;img.style.display='block';msg.textContent=''}
+ }
+ $('btnTFoto').onclick=function(){$('tFile').click()};
+ $('tFile').onchange=function(e){
+  var f=e.target.files[0];if(!f)return;
+  var r=new FileReader();
+  r.onload=function(){var im=new Image();im.onload=function(){
+   openCrop(toJpeg(im,0,0,im.width,im.height,1600,0.85),function(res){
+    try{localStorage.setItem(TF,res);tOculto=false;aplicaOculto();toast('Foto do título guardada ✓')}
+    catch(err){toast('Sem espaço para guardar a foto',4000)}
+   });
+  };im.src=r.result};
+  r.readAsDataURL(f);$('tFile').value='';
+ };
+ $('btnTDel').onclick=function(){if(confirm('Remover a foto do título?')){try{localStorage.removeItem(TF)}catch(e){}tFotoRender()}};
+ $('tFoto').onclick=function(){$('zimg').src=this.src;$('zoom').style.display='flex'};
  var tOculto=true,tSup=window.CSS&&CSS.supports&&CSS.supports('-webkit-text-security','disc');
  function aplicaOculto(){
   var t=$('titulo');
   if(tSup){t.style.webkitTextSecurity=tOculto?'disc':'none'}else{t.type=tOculto?'password':'text'}
   $('btnOlho').textContent=tOculto?'🔒':'🔓';
+  tFotoRender();
  }
  $('btnOlho').onclick=function(){tOculto=!tOculto;aplicaOculto()};
  aplicaOculto();
