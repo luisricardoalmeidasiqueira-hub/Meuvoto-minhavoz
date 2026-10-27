@@ -167,7 +167,11 @@ body{background-repeat:repeat,no-repeat}
 
 <details class="card"><summary>🤖 Leitor IA (Google)</summary><div class="det-body">
  <label>Chave da IA do Google</label>
- <input id="gKey" type="password" autocomplete="off" autocapitalize="off" spellcheck="false" placeholder="Cole sua chave aqui">
+ <div class="row" style="align-items:center">
+  <input id="gKey" type="text" name="gk" autocomplete="off" autocapitalize="off" autocorrect="off" spellcheck="false" placeholder="Cole sua chave aqui" style="flex:1;font-family:ui-monospace,Menlo,Consolas,'DejaVu Sans Mono',monospace;-webkit-text-security:disc">
+  <button class="sec" id="gOlho" style="flex:0 0 auto" aria-label="Mostrar ou esconder a chave">🔒</button>
+ </div>
+ <div class="acts"><button class="sec" id="gPaste" style="flex:1">📋 Colar a chave copiada</button></div>
  <label>Modelo (deixe vazio para o padrão)</label>
  <input id="gModel" autocomplete="off" autocapitalize="off" spellcheck="false" placeholder="gemini-3.8-flash">
  <div class="acts"><button id="gSave" style="flex:1">Salvar</button><button class="dan" id="gDel">Apagar chave</button></div>
@@ -220,7 +224,7 @@ body{background-repeat:repeat,no-repeat}
 <script>
 (function(){
  var AUTOR='Luis Ricardo de Almeida Siqueira';
- var VERSAO='1.2';
+ var VERSAO='1.3';
  var KEY='comprovantes-votacao',TK='titulo-eleitor',items=[],foto='';
  document.getElementById('copy').textContent='© '+new Date().getFullYear()+' '+AUTOR+' · Todos os direitos reservados';
  function $(id){return document.getElementById(id)}
@@ -466,6 +470,22 @@ body{background-repeat:repeat,no-repeat}
   gStatus();toast('Salvo ✓');
  };
  $('gDel').onclick=function(){if(confirm('Apagar a chave deste aparelho?')){try{localStorage.removeItem('gemini-key')}catch(e){}gStatus()}};
+ var gOculto=true,gSup=window.CSS&&CSS.supports&&CSS.supports('-webkit-text-security','disc');
+ function gAplicaOculto(){
+  var t=$('gKey');
+  if(gSup){t.style.webkitTextSecurity=gOculto?'disc':'none'}else{t.type=gOculto?'password':'text'}
+  $('gOlho').textContent=gOculto?'🔒':'🔓';
+ }
+ $('gOlho').onclick=function(){gOculto=!gOculto;gAplicaOculto()};
+ $('gPaste').onclick=function(){
+  if(navigator.clipboard&&navigator.clipboard.readText){
+   navigator.clipboard.readText().then(function(t){
+    t=(t||'').trim();
+    if(t){$('gKey').value=t;toast('Chave colada ✓ Toque em Salvar')}else toast('Não tem nada copiado');
+   }).catch(function(){toast('Não deu para colar. Segure o dedo no campo e toque em Colar',4000)});
+  }else toast('Segure o dedo no campo e toque em Colar',4000);
+ };
+ gAplicaOculto();
  gStatus();
  function leEPreenche(src,ids,extra){
   toast('Lendo o comprovante... na 1ª vez demora mais',90000);
