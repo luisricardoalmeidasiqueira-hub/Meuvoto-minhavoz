@@ -220,7 +220,7 @@ body{background-repeat:repeat,no-repeat}
 <script>
 (function(){
  var AUTOR='Luis Ricardo de Almeida Siqueira';
- var VERSAO='1.1';
+ var VERSAO='1.2';
  var KEY='comprovantes-votacao',TK='titulo-eleitor',items=[],foto='';
  document.getElementById('copy').textContent='© '+new Date().getFullYear()+' '+AUTOR+' · Todos os direitos reservados';
  function $(id){return document.getElementById(id)}
@@ -307,8 +307,7 @@ body{background-repeat:repeat,no-repeat}
  }
  function aposFoto(res){
   setFoto(res);
-  var k='';try{k=localStorage.getItem('gemini-key')||''}catch(e){}
-  if(k)$('btnLer').click();
+  $('btnLer').click();
  }
  $('btnFoto').onclick=camOpen;
  $('camX').onclick=camStop;
@@ -328,6 +327,16 @@ body{background-repeat:repeat,no-repeat}
   r.readAsDataURL(f);
  };
 
+ function nomeAuto(idEl,idData,idTurno){
+  var el=$(idEl),v=el.value.trim(),d=$(idData).value||'',t=$(idTurno).value;
+  var ano=d?d.slice(0,4):String(new Date().getFullYear());
+  if(!v){el.value='Eleições '+ano+' - '+t;return}
+  if(/^Elei\S*\s+(?:\S+\s+)?\d{4}\s+-\s+[12]º turno$/i.test(v)){
+   el.value=v.replace(/\d{4}/,ano).replace(/[12]º turno/i,t);
+  }
+ }
+ [['data'],['turno']].forEach(function(p){$(p[0]).addEventListener('change',function(){nomeAuto('eleicao','data','turno')})});
+ [['eData'],['eTurno']].forEach(function(p){$(p[0]).addEventListener('change',function(){nomeAuto('eEleicao','eData','eTurno')})});
  $('btnUpd').textContent='🔄 v'+VERSAO;
  $('fotoG').onchange=$('foto').onchange;
  $('salvar').onclick=function(){
@@ -462,6 +471,7 @@ body{background-repeat:repeat,no-repeat}
   toast('Lendo o comprovante... na 1ª vez demora mais',90000);
   lerInfo(src).then(function(o){
    var n=preencheForm(o,ids);
+   nomeAuto(ids.eleicao,ids.data,ids.turno);
    if(extra)extra(o);
    toast(n?'Li '+n+' informações. Confira antes de salvar ✓':'Não consegui ler. Recorte só o papel ou preencha à mão',4500);
   }).catch(function(){toast('Precisa de internet na 1ª vez para ler a foto',4500)});
