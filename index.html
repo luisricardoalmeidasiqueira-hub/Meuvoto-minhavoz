@@ -238,14 +238,27 @@ body{background-repeat:repeat,no-repeat}
 <script>
 (function(){
  var AUTOR='Luis Ricardo de Almeida Siqueira';
- var VERSAO='1.4';
+ var VERSAO='1.5';
  var KEY='comprovantes-votacao',TK='titulo-eleitor',items=[],foto='';
  document.getElementById('copy').textContent='© '+new Date().getFullYear()+' '+AUTOR+' · Todos os direitos reservados';
  function $(id){return document.getElementById(id)}
  function esc(s){return String(s||'').replace(/[&<>"]/g,function(c){return{'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]})}
  function fmt(d){if(!d)return'';var p=d.split('-');return p[2]+'/'+p[1]+'/'+p[0]}
  var tt;function toast(t,ms){var e=$('toast');e.textContent=t;e.style.display='block';clearTimeout(tt);tt=setTimeout(function(){e.style.display='none'},ms||2200)}
- function load(){try{items=JSON.parse(localStorage.getItem(KEY)||'[]')}catch(e){items=[]}}
+ function load(){
+  try{items=JSON.parse(localStorage.getItem(KEY)||'[]')}catch(e){items=[]}
+  var ch=false;
+  items.forEach(function(it){
+   var v=String(it.eleicao||'').trim();
+   if(it.turno&&/^Elei\S*\s+(?:\S+\s+)?\d{4}\s+-\s+[12]º turno$/i.test(v)){
+    var ano=it.data?String(it.data).slice(0,4):'';
+    var n=v.replace(/[12]º turno/i,it.turno);
+    if(ano)n=n.replace(/\d{4}/,ano);
+    if(n!==v){it.eleicao=n;ch=true}
+   }
+  });
+  if(ch)save();
+ }
  function save(){try{localStorage.setItem(KEY,JSON.stringify(items));return true}catch(e){alert('Sem espaço. Faça um backup e apague fotos antigas.');return false}}
  $('data').value=new Date().toISOString().slice(0,10);
  try{$('titulo').value=localStorage.getItem(TK)||''}catch(e){}
