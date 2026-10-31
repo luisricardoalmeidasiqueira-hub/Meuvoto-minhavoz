@@ -116,6 +116,8 @@ body{background-repeat:repeat,no-repeat}
  <img id="prev" alt="Prévia do comprovante">
  <button class="sec" id="btnRec" style="display:none;margin-top:8px">✂️ Recortar de novo</button>
  <button class="sec" id="btnLer" style="display:none;margin-top:8px">🔎 Ler informações</button>
+ <label>Tipo de documento</label>
+ <select id="tipo"><option value="voto">🗳️ Comprovante de votação</option><option value="decl">📄 Declaração de trabalho na eleição</option></select>
  <label>Eleição</label>
  <input id="eleicao" value="Eleições 2026 - 1º turno">
  <div class="row">
@@ -209,6 +211,7 @@ body{background-repeat:repeat,no-repeat}
 <div id="edit">
  <div class="card" style="width:100%;max-width:560px;max-height:92vh;overflow:auto;margin:0">
   <b>✏️ Editar comprovante</b>
+  <label>Tipo de documento</label><select id="eTipo"><option value="voto">🗳️ Comprovante de votação</option><option value="decl">📄 Declaração de trabalho na eleição</option></select>
   <label>Eleição</label><input id="eEleicao">
   <div class="row">
    <div><label>Data</label><input id="eData" type="date"></div>
@@ -238,7 +241,7 @@ body{background-repeat:repeat,no-repeat}
 <script>
 (function(){
  var AUTOR='Luis Ricardo de Almeida Siqueira';
- var VERSAO='1.5';
+ var VERSAO='1.6';
  var KEY='comprovantes-votacao',TK='titulo-eleitor',items=[],foto='';
  document.getElementById('copy').textContent='© '+new Date().getFullYear()+' '+AUTOR+' · Todos os direitos reservados';
  function $(id){return document.getElementById(id)}
@@ -372,9 +375,9 @@ body{background-repeat:repeat,no-repeat}
  $('fotoG').onchange=$('foto').onchange;
  $('salvar').onclick=function(){
   if(!foto&&!confirm('Salvar sem foto do comprovante?'))return;
-  items.unshift({id:Date.now(),eleicao:$('eleicao').value,data:$('data').value,turno:$('turno').value,zona:$('zona').value,secao:$('secao').value,local:$('local').value,obs:$('obs').value,foto:foto});
+  items.unshift({id:Date.now(),tipo:$('tipo').value,eleicao:$('eleicao').value,data:$('data').value,turno:$('turno').value,zona:$('zona').value,secao:$('secao').value,local:$('local').value,obs:$('obs').value,foto:foto});
   if(!save()){items.shift();return}
-  foto='';$('foto').value='';$('prev').style.display='none';$('btnFoto').textContent='📷 Fotografar comprovante';fotoOrig='';$('btnRec').style.display='none';$('btnLer').style.display='none';
+  foto='';$('foto').value='';$('prev').style.display='none';$('btnFoto').textContent='📷 Fotografar comprovante';fotoOrig='';$('tipo').value='voto';$('btnRec').style.display='none';$('btnLer').style.display='none';
   ['zona','secao','local','obs'].forEach(function(k){$(k).value=''});
   render();toast('Comprovante salvo ✓');
  };
@@ -397,7 +400,7 @@ body{background-repeat:repeat,no-repeat}
   if(es.indexOf(cur)>=0)s.value=cur;
   if(!items.length){l.innerHTML='<div class="empty">Nenhum comprovante guardado ainda.</div>';return}
   l.innerHTML=items.map(function(i){
-   return '<div class="card item" id="i'+i.id+'" data-e="'+esc(i.eleicao)+'"><div class="top">'+(i.foto?'<img src="'+i.foto+'" alt="Comprovante">':'')+'<div class="info"><h3>'+esc(i.eleicao)+'</h3>'
+   return '<div class="card item" id="i'+i.id+'" data-e="'+esc(i.eleicao)+'"><div class="top">'+(i.foto?'<img src="'+i.foto+'" alt="Comprovante">':'')+'<div class="info"><h3>'+(i.tipo==='decl'?'📄 Declaração · ':'')+esc(i.eleicao)+'</h3>'
    +'<div class="mut">'+fmt(i.data)+' · '+esc(i.turno)+(i.zona?' · Zona '+esc(i.zona):'')+(i.secao?' · Seção '+esc(i.secao):'')+'</div>'
    +(i.local?'<div>'+esc(i.local)+'</div>':'')
    +(i.obs?'<div class="mut">'+esc(i.obs)+'</div>':'')
@@ -406,7 +409,7 @@ body{background-repeat:repeat,no-repeat}
   }).join('');
  }
   function compartilha(it){
-  var txt=it.eleicao+' - '+fmt(it.data)+' · '+it.turno+(it.zona?' · Zona '+it.zona:'')+(it.secao?' · Seção '+it.secao:'')+(it.local?'\n'+it.local:'');
+  var txt=(it.tipo==='decl'?'Declaração de trabalho - ':'')+it.eleicao+' - '+fmt(it.data)+' · '+it.turno+(it.zona?' · Zona '+it.zona:'')+(it.secao?' · Seção '+it.secao:'')+(it.local?'\n'+it.local:'');
   if(it.foto&&navigator.share&&window.File){
    try{
     var bin=atob(it.foto.split(',')[1]),u=new Uint8Array(bin.length);
@@ -441,14 +444,17 @@ body{background-repeat:repeat,no-repeat}
   m=u.match(/T[IÍ]TULO[^0-9]{0,25}((?:\d\s?){12})/);if(m)o.titulo=m[1].replace(/\D/g,'');
   var tp=u.match(/GERAIS|MUNICIPAIS|SUPLEMENTARES|ESTADUAIS/);
   if(tp){var ano=o.data?o.data.slice(0,4):'';o.eleicao='Eleições '+tp[0].charAt(0)+tp[0].slice(1).toLowerCase()+(ano?' '+ano:'')+(o.turno?' - '+o.turno:'')}
+  m=u.match(/MES[ÁA]RIO|PRESIDENTE DE MESA|SECRET[ÁA]RIO/);if(m)o.funcao=m[0].charAt(0)+m[0].slice(1).toLowerCase();
   return o;
  }
  function preencheForm(o,ids){
   var n=0;
   ['eleicao','data','turno','zona','secao','local'].forEach(function(k){if(o[k]&&ids[k]){$(ids[k]).value=o[k];n++}});
+  if(o.funcao&&ids.obs){var ob=$(ids.obs);if(ob&&!/Função:/i.test(ob.value)){ob.value='Função: '+o.funcao+(o.detalhes?' - '+o.detalhes:'')+(ob.value?'\n'+ob.value:'');n++}}
   return n;
  }
  var GPROMPT='Leia este comprovante de votação brasileiro (foto) e responda SOMENTE com um JSON com estas chaves: eleicao (ex: "Eleições Gerais 2026 - 1º turno"), data (AAAA-MM-DD), turno ("1º turno" ou "2º turno"), zona (só números), secao (só números), local (local de votação, se houver), titulo (número do título de eleitor, só os 12 dígitos, se houver). Use null para o que não aparecer. Não invente nada.';
+ var GPROMPT_D='Leia esta declaração (ou certidão) de trabalho na eleição brasileira (mesário / serviço eleitoral) e responda SOMENTE com um JSON com estas chaves: eleicao (ex: "Eleições Gerais 2026 - 2º turno"), data (AAAA-MM-DD, data do trabalho ou da eleição), turno ("1º turno" ou "2º turno"), zona (só números), secao (só números), local (local de votação, se houver), funcao (ex: Mesário, Presidente de mesa, Secretário), detalhes (frase curta com horário ou dias trabalhados, se houver). Use null para o que não aparecer. Não invente nada.';
  function gLimpa(o){
   var r={};o=o||{};
   if(typeof o.eleicao==='string'&&o.eleicao.trim())r.eleicao=o.eleicao.trim();
@@ -458,14 +464,16 @@ body{background-repeat:repeat,no-repeat}
   var s=String(o.secao||'').match(/\d+/);if(s)r.secao=String(parseInt(s[0],10));
   if(typeof o.local==='string'&&o.local.trim())r.local=o.local.trim();
   var ti=String(o.titulo||'').replace(/\D/g,'');if(ti.length===12)r.titulo=ti;
+  if(typeof o.funcao==='string'&&o.funcao.trim())r.funcao=o.funcao.trim();
+  if(typeof o.detalhes==='string'&&o.detalhes.trim())r.detalhes=o.detalhes.trim();
   return r;
  }
- function lerGemini(src,key){
+ function lerGemini(src,key,tipo){
   var model='gemini-3.8-flash';try{model=localStorage.getItem('gemini-model')||model}catch(e){}
   var b64=src.split(',')[1];
   return fetch('https://generativelanguage.googleapis.com/v1beta/models/'+encodeURIComponent(model)+':generateContent',{
    method:'POST',headers:{'Content-Type':'application/json','x-goog-api-key':key},
-   body:JSON.stringify({contents:[{parts:[{text:GPROMPT},{inline_data:{mime_type:'image/jpeg',data:b64}}]}],generationConfig:{responseMimeType:'application/json',temperature:0}})
+   body:JSON.stringify({contents:[{parts:[{text:(tipo==='decl'?GPROMPT_D:GPROMPT)},{inline_data:{mime_type:'image/jpeg',data:b64}}]}],generationConfig:{responseMimeType:'application/json',temperature:0}})
   }).then(function(r){
    if(!r.ok)return r.text().then(function(t){var m='erro '+r.status;try{m=JSON.parse(t).error.message||m}catch(e){}throw new Error(String(m).slice(0,90))});
    return r.json();
@@ -474,10 +482,10 @@ body{background-repeat:repeat,no-repeat}
    return gLimpa(JSON.parse(t));
   });
  }
- function lerInfo(src){
+ function lerInfo(src,tipo){
   var key='';try{key=localStorage.getItem('gemini-key')||''}catch(e){}
   if(!key)return lerComprovante(src).then(parseComp);
-  return lerGemini(src,key).catch(function(err){
+  return lerGemini(src,key,tipo).catch(function(err){
    toast('IA do Google falhou: '+(err.message||'erro')+'. Usando o leitor do aparelho...',4000);
    return lerComprovante(src).then(parseComp);
   });
@@ -565,9 +573,9 @@ body{background-repeat:repeat,no-repeat}
  $('qrBtnShow').onclick=qrMostra;$('qrmX').onclick=qrMostraFecha;
  gAplicaOculto();
  gStatus();
- function leEPreenche(src,ids,extra){
+ function leEPreenche(src,ids,extra,tipo){
   toast('Lendo o comprovante... na 1ª vez demora mais',90000);
-  lerInfo(src).then(function(o){
+  lerInfo(src,tipo).then(function(o){
    var n=preencheForm(o,ids);
    nomeAuto(ids.eleicao,ids.data,ids.turno);
    if(extra)extra(o);
@@ -576,10 +584,10 @@ body{background-repeat:repeat,no-repeat}
  }
  $('btnLer').onclick=function(){
   if(!foto)return;
-  leEPreenche(foto,{eleicao:'eleicao',data:'data',turno:'turno',zona:'zona',secao:'secao',local:'local'},function(o){
+  leEPreenche(foto,{eleicao:'eleicao',data:'data',turno:'turno',zona:'zona',secao:'secao',local:'local',obs:'obs'},function(o){
    if(o.titulo&&!$('titulo').value){$('titulo').value=o.titulo;try{localStorage.setItem(TK,o.titulo)}catch(e){}}
    var d=$('maisDet');if(d)d.open=true;
-  });
+  },$('tipo').value);
  };
  function gerarPdf(lista,nome){
   if(!lista.length){toast('Nenhum comprovante para o PDF');return}
@@ -588,7 +596,7 @@ body{background-repeat:repeat,no-repeat}
    var doc=new window.jspdf.jsPDF({unit:'mm',format:'a4'});
    lista.forEach(function(it,idx){
     if(idx)doc.addPage();
-    doc.setFontSize(14);doc.text(String(it.eleicao||'Comprovante de votação'),15,18);
+    doc.setFontSize(14);doc.text((it.tipo==='decl'?'Declaração de trabalho - ':'')+String(it.eleicao||'Comprovante de votação'),15,18);
     doc.setFontSize(10);
     var l2=fmt(it.data)+' - '+(it.turno||'')+(it.zona?' - Zona '+it.zona:'')+(it.secao?' - Seção '+it.secao:'');
     doc.text(l2,15,25);
@@ -614,6 +622,7 @@ body{background-repeat:repeat,no-repeat}
  var editId=null;
  function openEdit(it){
   editId=it.id;
+  $('eTipo').value=it.tipo||'voto';
   $('eEleicao').value=it.eleicao||'';$('eData').value=it.data||'';$('eTurno').value=it.turno||'1º turno';
   $('eZona').value=it.zona||'';$('eSecao').value=it.secao||'';$('eLocal').value=it.local||'';$('eObs').value=it.obs||'';
   $('edit').style.display='flex';
@@ -622,7 +631,7 @@ body{background-repeat:repeat,no-repeat}
  $('eSave').onclick=function(){
   var it=items.filter(function(i){return i.id===editId})[0];if(!it)return;
   var bak=JSON.stringify(it);
-  it.eleicao=$('eEleicao').value;it.data=$('eData').value;it.turno=$('eTurno').value;
+  it.tipo=$('eTipo').value;it.eleicao=$('eEleicao').value;it.data=$('eData').value;it.turno=$('eTurno').value;
   it.zona=$('eZona').value;it.secao=$('eSecao').value;it.local=$('eLocal').value;it.obs=$('eObs').value;
   if(!save()){var o=JSON.parse(bak);for(var k in o)it[k]=o[k];return}
   $('edit').style.display='none';editId=null;render();toast('Alterações salvas ✓');
@@ -631,7 +640,7 @@ body{background-repeat:repeat,no-repeat}
  $('eLer').onclick=function(){
   var it=items.filter(function(i){return i.id===editId})[0];
   if(!it||!it.foto){toast('Este comprovante não tem foto');return}
-  leEPreenche(it.foto,{eleicao:'eEleicao',data:'eData',turno:'eTurno',zona:'eZona',secao:'eSecao',local:'eLocal'});
+  leEPreenche(it.foto,{eleicao:'eEleicao',data:'eData',turno:'eTurno',zona:'eZona',secao:'eSecao',local:'eLocal',obs:'eObs'},null,$('eTipo').value);
  };
  $('list').onclick=function(e){
   if(e.target.tagName==='IMG'){$('zimg').src=e.target.src;$('zoom').style.display='flex';return}
