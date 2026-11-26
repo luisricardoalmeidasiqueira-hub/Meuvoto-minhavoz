@@ -53,8 +53,8 @@ details summary{cursor:pointer;font-weight:600;color:var(--pri);margin-top:10px}
 .cbar{display:flex;gap:8px;margin-top:12px;padding:0 10px;flex-wrap:wrap;justify-content:center}
 .cdica{color:#cfd6df;font-size:.8rem;margin-bottom:8px}
 @media print{#crop{display:none!important}}
-#edit{position:fixed;inset:0;background:rgba(0,0,0,.7);z-index:19;display:none;align-items:center;justify-content:center;padding:env(safe-area-inset-top,0px) 10px env(safe-area-inset-bottom,0px)}
-@media print{#edit{display:none!important}}
+#edit,#folga{position:fixed;inset:0;background:rgba(0,0,0,.7);z-index:19;display:none;align-items:center;justify-content:center;padding:env(safe-area-inset-top,0px) 10px env(safe-area-inset-bottom,0px)}
+@media print{#edit,#folga{display:none!important}}
 main{max-width:560px;padding:0 10px 24px}
 header{padding:12px 14px 26px}header h1{font-size:1.05rem}header p{font-size:.8rem;margin:2px 0 0}header .faixa{margin-top:8px}
 .card{padding:9px 10px;margin-bottom:8px}
@@ -181,6 +181,7 @@ body{background-repeat:repeat,no-repeat}
  <label>E-mail</label><input id="nEmail" type="email" autocomplete="username" autocapitalize="off">
  <label>Senha</label><input id="nSenha" type="password" autocomplete="current-password">
  <div class="acts"><button id="nEntrar" style="flex:1">Entrar</button><button class="sec" id="nCriar" style="flex:1">Criar conta</button><button class="dan" id="nSair">Sair</button></div>
+ <div class="acts"><button class="sec" id="nQrMostra" style="flex:1">📱 Conectar outro aparelho (mostrar QR)</button><button class="sec" id="nQrLer" style="flex:1">📷 Ler QR de conexão</button></div>
  <p class="mut" style="margin:8px 0 0">Bolinha: 🟢 tudo salvo, 🟡 enviando, 🔴 sem conexão ou erro, ⚪ desligada. Os comprovantes e declarações vão para a nuvem. A foto e o número do título ficam só neste aparelho.</p>
 </div></details>
 
@@ -205,7 +206,7 @@ body{background-repeat:repeat,no-repeat}
 <p id="copy" style="text-align:center;color:#fff;opacity:.85;font-size:.85rem;margin:6px 0 0;text-shadow:0 1px 3px rgba(0,0,0,.6)"></p>
 </main>
 <div id="qrs" class="ov">
- <div class="cdica">Aponte a câmera para o QR da chave</div>
+ <div class="cdica">Aponte a câmera para o QR</div>
  <div style="position:relative;display:inline-block;max-width:100%"><video id="qrv" autoplay playsinline muted style="display:block;max-width:100vw;max-height:calc(100vh - 110px)"></video></div>
  <div class="cbar"><button class="dan" id="qrsX">Cancelar</button></div>
 </div>
@@ -225,6 +226,20 @@ body{background-repeat:repeat,no-repeat}
  </div>
 </div>
 <div id="zoom"><img id="zimg" alt="Comprovante"></div>
+<div id="folga">
+ <div class="card" style="width:100%;max-width:560px;max-height:92vh;overflow:auto;margin:0">
+  <b>📅 Folgas da eleição</b>
+  <div class="mut" id="fgTit"></div>
+  <label>Dias de convocação (dias que você trabalhou)</label><input id="fgConv" inputmode="numeric" placeholder="ex: 2">
+  <label>Escreva os dias de folga</label>
+  <div class="row" style="align-items:center"><input id="fgTxt" placeholder="18, 19, 23, 24/11" style="flex:1"><button class="sec" id="fgAdd" style="flex:0 0 auto">Adicionar</button></div>
+  <label>Ou escolha uma data</label>
+  <div class="row" style="align-items:center"><input id="fgData" type="date" style="flex:1"><button class="sec" id="fgAdd2" style="flex:0 0 auto">＋</button></div>
+  <div id="fgChips" class="acts"></div>
+  <div class="mut" id="fgResumo" style="margin-top:8px"></div>
+  <div class="acts"><button id="fgSave" style="flex:1">Salvar</button><button class="sec" id="fgCancel">Cancelar</button></div>
+ </div>
+</div>
 <div id="edit">
  <div class="card" style="width:100%;max-width:560px;max-height:92vh;overflow:auto;margin:0">
   <b>✏️ Editar comprovante</b>
@@ -258,7 +273,7 @@ body{background-repeat:repeat,no-repeat}
 <script>
 (function(){
  var AUTOR='Luis Ricardo de Almeida Siqueira';
- var VERSAO='1.7';
+ var VERSAO='1.9';
  var KEY='comprovantes-votacao',TK='titulo-eleitor',items=[],foto='';
  document.getElementById('copy').textContent='© '+new Date().getFullYear()+' '+AUTOR+' · Todos os direitos reservados';
  function $(id){return document.getElementById(id)}
@@ -475,7 +490,7 @@ body{background-repeat:repeat,no-repeat}
   if(!e||!s){toast('Digite e-mail e senha');return}
   var a=firebase.auth();
   (criar?a.createUserWithEmailAndPassword(e,s):a.signInWithEmailAndPassword(e,s))
-   .then(function(){$('nSenha').value='';toast('Conectado ✓')}).catch(function(err){toast(nuvErro(err),4500)});
+   .then(function(){try{localStorage.setItem('nuv-email',e)}catch(x){}$('nSenha').value='';toast('Conectado ✓')}).catch(function(err){toast(nuvErro(err),4500)});
  }
  $('nCfgSave').onclick=function(){
   var o=nuvParse($('nCfg').value);
@@ -489,6 +504,7 @@ body{background-repeat:repeat,no-repeat}
  $('btnNuv').onclick=function(){var c=$('nuvCard');c.open=true;c.scrollIntoView({behavior:'smooth',block:'center'})};
  window.addEventListener('offline',function(){if(nuv.user)nuvDot('err')});
  window.addEventListener('online',function(){if(nuv.user)nuvDot('sync')});
+ try{var em0=localStorage.getItem('nuv-email');if(em0)$('nEmail').value=em0}catch(e){}
  $('btnUpd').textContent='🔄 v'+VERSAO;
  $('fotoG').onchange=$('foto').onchange;
  $('salvar').onclick=function(){
@@ -524,8 +540,9 @@ body{background-repeat:repeat,no-repeat}
    +'<div class="mut">'+fmt(i.data)+' · '+esc(i.turno)+(i.zona?' · Zona '+esc(i.zona):'')+(i.secao?' · Seção '+esc(i.secao):'')+'</div>'
    +(i.local?'<div>'+esc(i.local)+'</div>':'')
    +(i.obs?'<div class="mut">'+esc(i.obs)+'</div>':'')
+   +(i.tipo==='decl'&&folgasTxt(i)?'<div class="mut">'+esc(folgasTxt(i))+'</div>':'')
    +'</div></div>'
-   +'<div class="acts"><button data-s="'+i.id+'">📤 Compartilhar</button><button class="sec" data-pdf="'+i.id+'">📄 PDF</button><button class="sec" data-ed="'+i.id+'">✏️ Editar</button>'+(i.foto?'<button class="sec" data-c="'+i.id+'">✂️ Recortar</button>':'')+'<button class="sec" data-p="'+i.id+'">🖨️ Imprimir este</button><button class="dan" data-d="'+i.id+'">Excluir</button></div></div>';}
+   +'<div class="acts"><button data-s="'+i.id+'">📤 Compartilhar</button><button class="sec" data-pdf="'+i.id+'">📄 PDF</button>'+(i.tipo==='decl'?'<button class="sec" data-fg="'+i.id+'">📅 Folgas</button>':'')+'<button class="sec" data-ed="'+i.id+'">✏️ Editar</button>'+(i.foto?'<button class="sec" data-c="'+i.id+'">✂️ Recortar</button>':'')+'<button class="sec" data-p="'+i.id+'">🖨️ Imprimir este</button><button class="dan" data-d="'+i.id+'">Excluir</button></div></div>';}
   var grupos=[['voto','🗳️ Comprovantes de votação'],['decl','📄 Declarações de trabalho']];
   l.innerHTML=grupos.map(function(g){
    var arr=items.filter(function(i){return (i.tipo==='decl'?'decl':'voto')===g[0]}).sort(function(a,b){return String(a.data||'').localeCompare(String(b.data||''))||(a.id-b.id)});
@@ -534,7 +551,7 @@ body{background-repeat:repeat,no-repeat}
   }).join('');
  }
   function compartilha(it){
-  var txt=(it.tipo==='decl'?'Declaração de trabalho - ':'')+it.eleicao+' - '+fmt(it.data)+' · '+it.turno+(it.zona?' · Zona '+it.zona:'')+(it.secao?' · Seção '+it.secao:'')+(it.local?'\n'+it.local:'');
+  var txt=(it.tipo==='decl'?'Declaração de trabalho - ':'')+it.eleicao+' - '+fmt(it.data)+' · '+it.turno+(it.zona?' · Zona '+it.zona:'')+(it.secao?' · Seção '+it.secao:'')+(it.local?'\n'+it.local:'')+(it.tipo==='decl'&&folgasTxt(it)?'\n'+folgasTxt(it):'');
   if(it.foto&&navigator.share&&window.File){
    try{
     var bin=atob(it.foto.split(',')[1]),u=new Uint8Array(bin.length);
@@ -658,6 +675,22 @@ body{background-repeat:repeat,no-repeat}
   return '';
  }
  function qrAceita(txt){
+  var t0=String(txt||'').trim();
+  if(t0.indexOf('MCFB1:')===0){
+   try{
+    var o=JSON.parse(t0.slice(6));
+    if(!o.apiKey||!o.projectId)throw 0;
+    var em=o.email||'';delete o.email;
+    localStorage.setItem('fb-config',JSON.stringify(o));
+    if(em){localStorage.setItem('nuv-email',em);$('nEmail').value=em}
+   }catch(e){toast('QR de conexão inválido',2500);return false}
+   qrScanStop();
+   toast('Conexão lida ✓ Digite a senha e toque em Entrar',6000);
+   nuvIniciar();
+   var c=$('nuvCard');c.open=true;
+   setTimeout(function(){c.scrollIntoView({behavior:'smooth',block:'center'});$('nSenha').focus()},400);
+   return true;
+  }
   var k=qrExtrai(txt);
   if(!k){toast('Esse QR não é de uma chave',2000);return false}
   try{localStorage.setItem('gemini-key',k)}catch(e){toast('Não consegui salvar');return false}
@@ -687,13 +720,26 @@ body{background-repeat:repeat,no-repeat}
   var k=$('gKey').value.trim();
   if(!k){try{k=localStorage.getItem('gemini-key')||''}catch(e){}}
   if(!k){toast('Cole a chave no campo (ou salve) antes de mostrar o QR',4000);return}
+  qrMostraTexto('MCKEY1:'+k,'M');
+ }
+ function qrMostraCfg(){
+  var cfg=nuvCfg();
+  if(!cfg){toast('Salve a configuração do Firebase antes',3500);return}
+  var o={apiKey:cfg.apiKey,authDomain:cfg.authDomain,projectId:cfg.projectId,appId:cfg.appId},em='';
+  try{em=localStorage.getItem('nuv-email')||''}catch(e){}
+  if(!em)em=$('nEmail').value.trim();
+  if(em)o.email=em;
+  qrMostraTexto('MCFB1:'+JSON.stringify(o),'L');
+ }
+ function qrMostraTexto(texto,nivel){
   toast('Gerando QR...',60000);
   usa('qrgen','https://cdnjs.cloudflare.com/ajax/libs/qrcode-generator/1.4.4/qrcode.min.js','qrcode').then(function(){
-   var q=window.qrcode(0,'M');q.addData('MCKEY1:'+k);q.make();
+   var q=window.qrcode(0,nivel||'M');q.addData(texto);q.make();
    $('qrimg').src=q.createDataURL(8,4);$('qrm').style.display='flex';toast('Pronto',800);
    clearTimeout(qrTimer);qrTimer=setTimeout(qrMostraFecha,60000);
   }).catch(function(){toast('Precisa de internet para gerar o QR',4000)});
  }
+ $('nQrMostra').onclick=qrMostraCfg;$('nQrLer').onclick=qrScan;
  $('qrBtnScan').onclick=qrScan;$('qrsX').onclick=qrScanStop;
  $('qrBtnShow').onclick=qrMostra;$('qrmX').onclick=qrMostraFecha;
  gAplicaOculto();
@@ -728,6 +774,7 @@ body{background-repeat:repeat,no-repeat}
     var y=31;
     if(it.local){doc.text(String(it.local),15,y);y+=6}
     if(it.obs){doc.text(doc.splitTextToSize(String(it.obs),180),15,y);y+=6}
+    if(it.tipo==='decl'&&folgasTxt(it)){doc.text(doc.splitTextToSize(folgasTxt(it).replace('📅 ',''),180),15,y);y+=6}
     if(it.foto){
      var p=doc.getImageProperties(it.foto),mw=180,mh=297-y-15,s=Math.min(mw/p.width,mh/p.height);
      doc.addImage(it.foto,'JPEG',15,y+3,p.width*s,p.height*s);
@@ -743,6 +790,57 @@ body{background-repeat:repeat,no-repeat}
   var v=$('selImp').value;
   var lista=items.filter(function(i){return !v||i.eleicao===v});
   gerarPdf(lista,'comprovantes-votacao.pdf');
+ };
+ function fmtDM(d){var p=String(d).split('-');return p[2]+'/'+p[1]}
+ function folgasTxt(i){
+  if(!i.folgas||!i.folgas.length)return '';
+  var t='📅 Folgas: '+i.folgas.map(fmtDM).join(', ')+' ('+i.folgas.length+')',dir=(parseInt(i.convocados,10)||0)*2;
+  if(dir){var r=dir-i.folgas.length;t+=' · direito '+dir+(r>0?' · restam '+r:(r<0?' · passou '+(-r):' · completo'))}
+  return t;
+ }
+ var fgId=null,fgList=[],fgAno='';
+ function fgRender(){
+  $('fgChips').innerHTML=fgList.map(function(d,i){return '<button class="sec" data-fgx="'+i+'">'+fmtDM(d)+' ✕</button>'}).join('');
+  var conv=parseInt($('fgConv').value,10)||0,n=fgList.length,t='Tirados: '+n+(n===1?' dia':' dias');
+  if(conv){var dir=conv*2,r=dir-n;t='Direito: '+dir+' dias (2 por dia de convocação) · '+t+' · '+(r>0?'restam '+r:(r<0?'passou '+(-r):'completo ✓'))}
+  $('fgResumo').textContent=t;
+ }
+ function fgAddDia(d){if(fgList.indexOf(d)<0)fgList.push(d);fgList.sort()}
+ function fgAbre(it){
+  fgId=it.id;fgList=(it.folgas||[]).slice();
+  fgAno=String(it.data||'').slice(0,4)||String(new Date().getFullYear());
+  $('fgConv').value=it.convocados||'';$('fgTxt').value='';$('fgData').value='';$('fgTit').textContent=it.eleicao||'';
+  fgRender();$('folga').style.display='flex';
+ }
+ function fgParse(txt){
+  var t=String(txt||'').toLowerCase().trim(),mm=t.match(/(?:\/|\bdo\b|\bde\b|\bm[eê]s\b)\s*(\d{1,2})\s*$/);
+  if(!mm)return null;
+  var mes=parseInt(mm[1],10);if(mes<1||mes>12)return null;
+  var dias=t.slice(0,mm.index).match(/\d{1,2}/g)||[],out=[],ano=parseInt(fgAno,10);
+  dias.forEach(function(x){
+   var d=parseInt(x,10),dt=new Date(ano,mes-1,d);
+   if(d>=1&&dt.getMonth()===mes-1)out.push(fgAno+'-'+('0'+mes).slice(-2)+'-'+('0'+d).slice(-2));
+  });
+  return out;
+ }
+ function fgTentaTexto(){
+  var v=$('fgTxt').value.trim();if(!v)return true;
+  var r=fgParse(v);
+  if(!r||!r.length){toast('Escreva assim: 18, 19, 23, 24/11',3500);return false}
+  r.forEach(fgAddDia);$('fgTxt').value='';fgRender();return true;
+ }
+ $('fgAdd').onclick=function(){fgTentaTexto()};
+ $('fgAdd2').onclick=function(){var d=$('fgData').value;if(!d){toast('Escolha uma data');return}fgAddDia(d);$('fgData').value='';fgRender()};
+ $('fgChips').onclick=function(e){var x=e.target.getAttribute('data-fgx');if(x!==null){fgList.splice(parseInt(x,10),1);fgRender()}};
+ $('fgConv').addEventListener('input',fgRender);
+ $('fgCancel').onclick=function(){$('folga').style.display='none';fgId=null};
+ $('fgSave').onclick=function(){
+  if(!fgTentaTexto())return;
+  var it=items.filter(function(i){return i.id===fgId})[0];if(!it)return;
+  var bf=it.folgas,bc=it.convocados,cv=parseInt($('fgConv').value,10);
+  it.folgas=fgList.slice();if(cv>0)it.convocados=cv;else delete it.convocados;
+  if(!save()){it.folgas=bf;if(bc)it.convocados=bc;return}
+  nuvPush(it);$('folga').style.display='none';fgId=null;render();toast('Folgas salvas ✓');
  };
  var editId=null;
  function openEdit(it){
@@ -772,6 +870,8 @@ body{background-repeat:repeat,no-repeat}
   var d=e.target.getAttribute('data-d'),p=e.target.getAttribute('data-p');
   var s=e.target.getAttribute('data-s');
   var cc=e.target.getAttribute('data-c');
+  var fg=e.target.getAttribute('data-fg');
+  if(fg){var itf=items.filter(function(i){return String(i.id)===fg})[0];if(itf)fgAbre(itf)}
   var ed=e.target.getAttribute('data-ed');
   if(ed){var it3=items.filter(function(i){return String(i.id)===ed})[0];if(it3)openEdit(it3)}
   var pf=e.target.getAttribute('data-pdf');
