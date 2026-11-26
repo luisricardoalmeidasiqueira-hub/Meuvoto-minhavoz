@@ -88,11 +88,17 @@ body{background-repeat:repeat,no-repeat}
 @media print{#cam{display:none!important}}
 .ov{position:fixed;inset:0;background:#000;z-index:22;display:none;flex-direction:column;align-items:center;justify-content:center;padding-top:env(safe-area-inset-top,0px);padding-bottom:env(safe-area-inset-bottom,0px)}
 @media print{.ov{display:none!important}}
+#nuvDot{position:absolute;right:0;bottom:0;width:12px;height:12px;border-radius:50%;border:2px solid #1c2430;background:#8a94a3}
+.ib{position:relative}
+.grp .card.item{background:rgba(127,127,127,.08);box-shadow:none}
+@media(max-width:430px){.hbar{gap:4px}.ib{width:30px;height:30px;line-height:30px;font-size:.9rem}.ib.chip{height:30px;line-height:28px;font-size:.72rem;padding:0 8px}header h1{font-size:.95rem;max-width:52%}header p{font-size:.75rem;max-width:52%}}
+@media print{details.grp>summary{display:none}details.grp{border:0!important;box-shadow:none!important;padding:0!important;background:none!important}.grp .card.item{background:#fff}}
 </style>
 </head>
 <body>
 <header>
  <div class="hbar">
+  <button class="ib" id="btnNuv" title="Nuvem" aria-label="Nuvem">☁️<span id="nuvDot"></span></button>
   <button class="ib" id="btnShare" title="Compartilhar aplicativo" aria-label="Compartilhar aplicativo">📤</button>
   <button class="ib" id="btnAtalho" title="Criar atalho na tela inicial" aria-label="Criar atalho na tela inicial">📲</button>
   <button class="ib chip" id="btnUpd" title="Atualizar aplicativo" aria-label="Atualizar aplicativo">🔄</button>
@@ -166,6 +172,17 @@ body{background-repeat:repeat,no-repeat}
 </div>
 
 <div id="list"></div>
+
+<details class="card" id="nuvCard"><summary>☁️ Nuvem (usar em outros aparelhos)</summary><div class="det-body">
+ <p class="mut" id="nMsg" style="margin:0 0 4px"></p>
+ <label>Configuração do Firebase (cole aqui)</label>
+ <textarea id="nCfg" rows="3" autocomplete="off" autocapitalize="off" spellcheck="false" placeholder='apiKey: "...", authDomain: "...", projectId: "...", appId: "..."'></textarea>
+ <div class="acts"><button class="sec" id="nCfgSave" style="flex:1">Salvar configuração</button></div>
+ <label>E-mail</label><input id="nEmail" type="email" autocomplete="username" autocapitalize="off">
+ <label>Senha</label><input id="nSenha" type="password" autocomplete="current-password">
+ <div class="acts"><button id="nEntrar" style="flex:1">Entrar</button><button class="sec" id="nCriar" style="flex:1">Criar conta</button><button class="dan" id="nSair">Sair</button></div>
+ <p class="mut" style="margin:8px 0 0">Bolinha: 🟢 tudo salvo, 🟡 enviando, 🔴 sem conexão ou erro, ⚪ desligada. Os comprovantes e declarações vão para a nuvem. A foto e o número do título ficam só neste aparelho.</p>
+</div></details>
 
 <details class="card"><summary>🎨 Cor do app</summary><div class="det-body"><div class="sw" id="sw"></div></div></details>
 
@@ -241,7 +258,7 @@ body{background-repeat:repeat,no-repeat}
 <script>
 (function(){
  var AUTOR='Luis Ricardo de Almeida Siqueira';
- var VERSAO='1.6';
+ var VERSAO='1.7';
  var KEY='comprovantes-votacao',TK='titulo-eleitor',items=[],foto='';
  document.getElementById('copy').textContent='© '+new Date().getFullYear()+' '+AUTOR+' · Todos os direitos reservados';
  function $(id){return document.getElementById(id)}
@@ -371,12 +388,114 @@ body{background-repeat:repeat,no-repeat}
  }
  [['data'],['turno']].forEach(function(p){$(p[0]).addEventListener('change',function(){nomeAuto('eleicao','data','turno')})});
  [['eData'],['eTurno']].forEach(function(p){$(p[0]).addEventListener('change',function(){nomeAuto('eEleicao','eData','eTurno')})});
+ $('list').addEventListener('toggle',function(e){var d=e.target;if(d&&d.getAttribute&&d.getAttribute('data-g'))abertos[d.getAttribute('data-g')]=d.open},true);
+
+ /* ===== Nuvem (Firebase) ===== */
+ var nuv={app:null,db:null,col:null,user:null,unsub:null,primeira:true,est:'off'};
+ function salvaLocal(){try{localStorage.setItem(KEY,JSON.stringify(items))}catch(e){}}
+ function nuvDot(est){
+  var c={off:'#8a94a3',ok:'#2ecc71',sync:'#f1c40f',err:'#e74c3c'}[est]||'#8a94a3';
+  $('nuvDot').style.background=c;nuv.est=est;
+  $('btnNuv').title={off:'Nuvem desligada',ok:'Tudo salvo na nuvem',sync:'Enviando...',err:'Sem conexão ou erro'}[est]||'Nuvem';
+ }
+ function nuvMsg(t){$('nMsg').textContent=t}
+ function nuvCfg(){try{return JSON.parse(localStorage.getItem('fb-config')||'null')}catch(e){return null}}
+ function nuvParse(txt){var o={},re=/([A-Za-z]\w*)"?\s*:\s*["']([^"']*)["']/g,m;while((m=re.exec(txt))){o[m[1]]=m[2]}return o}
+ function nuvPend(){try{return JSON.parse(localStorage.getItem('nuv-apagar')||'[]')}catch(e){return[]}}
+ function nuvCarrega(){
+  var b='https://www.gstatic.com/firebasejs/10.14.1/';
+  return usa('fb1',b+'firebase-app-compat.js','firebase')
+   .then(function(){return usa('fb2',b+'firebase-auth-compat.js','__fb2')})
+   .then(function(){return usa('fb3',b+'firebase-firestore-compat.js','__fb3')});
+ }
+ function nuvEnvia(it){
+  if(!nuv.col)return;
+  nuvDot('sync');
+  nuv.col.doc(String(it.id)).set(it).then(function(){nuvDot('ok')}).catch(function(err){nuvDot('err');nuvMsg('Não consegui enviar: '+((err&&err.code)||'erro'))});
+ }
+ function nuvPush(it){it.upd=Date.now();salvaLocal();nuvEnvia(it)}
+ function nuvFlushDel(){
+  var p=nuvPend();if(!nuv.col||!p.length)return;
+  nuvDot('sync');
+  Promise.all(p.map(function(id){return nuv.col.doc(String(id)).set({id:id,deleted:true,upd:Date.now()})}))
+   .then(function(){try{localStorage.removeItem('nuv-apagar')}catch(e){}nuvDot('ok')}).catch(function(){nuvDot('err')});
+ }
+ function nuvDel(id){var p=nuvPend();p.push(id);try{localStorage.setItem('nuv-apagar',JSON.stringify(p))}catch(e){}nuvFlushDel()}
+ function nuvConecta(){
+  nuv.col=nuv.db.collection('users').doc(nuv.user.uid).collection('comprovantes');
+  nuv.primeira=true;
+  nuv.unsub=nuv.col.onSnapshot({includeMetadataChanges:true},function(snap){
+   var cloud={},mudou=false;
+   snap.docChanges().forEach(function(ch){
+    var d=ch.doc.data();if(!d)return;
+    var id=String(d.id!==undefined?d.id:ch.doc.id),idx=items.findIndex(function(x){return String(x.id)===id});
+    if(ch.type==='removed'||d.deleted){if(idx>=0){items.splice(idx,1);mudou=true}return}
+    if(idx<0){items.push(d);mudou=true}
+    else if((d.upd||0)>(items[idx].upd||0)){items[idx]=d;mudou=true}
+   });
+   snap.forEach(function(doc){var d=doc.data();if(d)cloud[String(d.id!==undefined?d.id:doc.id)]=d});
+   if(mudou){items.sort(function(a,b){return b.id-a.id});salvaLocal();render()}
+   if(nuv.primeira){
+    nuv.primeira=false;
+    items.forEach(function(it){var c=cloud[String(it.id)];if(!c||(it.upd||0)>(c.upd||0))nuvEnvia(it)});
+    nuvFlushDel();
+   }
+   nuvDot(snap.metadata.hasPendingWrites?'sync':'ok');
+  },function(err){
+   nuvDot('err');
+   nuvMsg(err&&err.code==='permission-denied'?'Sem permissão. Confira as regras do Firestore.':'Erro na nuvem: '+((err&&err.message)||''));
+  });
+ }
+ function nuvAuth(u){
+  nuv.user=u;
+  if(!u){if(nuv.unsub){nuv.unsub();nuv.unsub=null}nuv.col=null;nuvDot('off');nuvMsg('Entre com seu e-mail e senha.');return}
+  nuvMsg('Conectado como '+u.email);nuvDot('sync');nuvConecta();
+ }
+ function nuvIniciar(){
+  var cfg=nuvCfg();
+  if(!cfg||!cfg.apiKey||!cfg.projectId){nuvDot('off');nuvMsg('Cole a configuração do Firebase para ligar a nuvem.');return}
+  nuvDot('sync');nuvMsg('Conectando...');
+  nuvCarrega().then(function(){
+   if(!nuv.app){nuv.app=firebase.initializeApp(cfg);nuv.db=firebase.firestore();firebase.auth().onAuthStateChanged(nuvAuth)}
+  }).catch(function(){nuvDot('err');nuvMsg('Sem internet para carregar a nuvem.')});
+ }
+ function nuvErro(e){
+  var c=(e&&e.code)||'';
+  if(c==='auth/invalid-credential'||c==='auth/wrong-password'||c==='auth/user-not-found')return 'E-mail ou senha errados';
+  if(c==='auth/email-already-in-use')return 'Esse e-mail já tem conta. Toque em Entrar';
+  if(c==='auth/weak-password')return 'Senha fraca: use pelo menos 6 caracteres';
+  if(c==='auth/invalid-email')return 'E-mail inválido';
+  if(c==='auth/operation-not-allowed')return 'Ative "E-mail/senha" em Authentication no Firebase';
+  if(c==='auth/network-request-failed')return 'Sem internet';
+  return 'Erro: '+(c||'tente de novo');
+ }
+ function nuvAcao(criar){
+  var e=$('nEmail').value.trim(),s=$('nSenha').value;
+  if(!nuv.app){toast('Salve a configuração primeiro',3000);return}
+  if(!e||!s){toast('Digite e-mail e senha');return}
+  var a=firebase.auth();
+  (criar?a.createUserWithEmailAndPassword(e,s):a.signInWithEmailAndPassword(e,s))
+   .then(function(){$('nSenha').value='';toast('Conectado ✓')}).catch(function(err){toast(nuvErro(err),4500)});
+ }
+ $('nCfgSave').onclick=function(){
+  var o=nuvParse($('nCfg').value);
+  if(!o.apiKey||!o.projectId){toast('Não achei apiKey e projectId no texto',4000);return}
+  try{localStorage.setItem('fb-config',JSON.stringify(o))}catch(e){}
+  $('nCfg').value='';toast('Configuração salva ✓');nuvIniciar();
+ };
+ $('nEntrar').onclick=function(){nuvAcao(false)};
+ $('nCriar').onclick=function(){nuvAcao(true)};
+ $('nSair').onclick=function(){if(nuv.app&&confirm('Sair da nuvem neste aparelho? Os comprovantes continuam aqui.')){firebase.auth().signOut()}};
+ $('btnNuv').onclick=function(){var c=$('nuvCard');c.open=true;c.scrollIntoView({behavior:'smooth',block:'center'})};
+ window.addEventListener('offline',function(){if(nuv.user)nuvDot('err')});
+ window.addEventListener('online',function(){if(nuv.user)nuvDot('sync')});
  $('btnUpd').textContent='🔄 v'+VERSAO;
  $('fotoG').onchange=$('foto').onchange;
  $('salvar').onclick=function(){
   if(!foto&&!confirm('Salvar sem foto do comprovante?'))return;
   items.unshift({id:Date.now(),tipo:$('tipo').value,eleicao:$('eleicao').value,data:$('data').value,turno:$('turno').value,zona:$('zona').value,secao:$('secao').value,local:$('local').value,obs:$('obs').value,foto:foto});
   if(!save()){items.shift();return}
+  nuvPush(items[0]);abertos[items[0].tipo==='decl'?'decl':'voto']=true;
   foto='';$('foto').value='';$('prev').style.display='none';$('btnFoto').textContent='📷 Fotografar comprovante';fotoOrig='';$('tipo').value='voto';$('btnRec').style.display='none';$('btnLer').style.display='none';
   ['zona','secao','local','obs'].forEach(function(k){$(k).value=''});
   render();toast('Comprovante salvo ✓');
@@ -393,19 +512,25 @@ body{background-repeat:repeat,no-repeat}
   abrir();
  };
 
+ var abertos={voto:false,decl:false};
+ function abreTudo(fn){var ds=document.querySelectorAll('details.grp'),st=[];ds.forEach(function(d){st.push(d.open);d.open=true});fn();ds.forEach(function(d,i){d.open=st[i]})}
  function render(){
   var l=$('list'),s=$('selImp'),cur=s.value,es=[];
   items.forEach(function(i){if(es.indexOf(i.eleicao)<0)es.push(i.eleicao)});
   s.innerHTML='<option value="">Todas as eleições</option>'+es.map(function(e){return '<option value="'+esc(e)+'">'+esc(e)+'</option>'}).join('');
   if(es.indexOf(cur)>=0)s.value=cur;
   if(!items.length){l.innerHTML='<div class="empty">Nenhum comprovante guardado ainda.</div>';return}
-  l.innerHTML=items.map(function(i){
-   return '<div class="card item" id="i'+i.id+'" data-e="'+esc(i.eleicao)+'"><div class="top">'+(i.foto?'<img src="'+i.foto+'" alt="Comprovante">':'')+'<div class="info"><h3>'+(i.tipo==='decl'?'📄 Declaração · ':'')+esc(i.eleicao)+'</h3>'
+  function itemHtml(i){return '<div class="card item" id="i'+i.id+'" data-e="'+esc(i.eleicao)+'"><div class="top">'+(i.foto?'<img src="'+i.foto+'" alt="Comprovante">':'')+'<div class="info"><h3>'+(i.tipo==='decl'?'📄 Declaração · ':'')+esc(i.eleicao)+'</h3>'
    +'<div class="mut">'+fmt(i.data)+' · '+esc(i.turno)+(i.zona?' · Zona '+esc(i.zona):'')+(i.secao?' · Seção '+esc(i.secao):'')+'</div>'
    +(i.local?'<div>'+esc(i.local)+'</div>':'')
    +(i.obs?'<div class="mut">'+esc(i.obs)+'</div>':'')
    +'</div></div>'
-   +'<div class="acts"><button data-s="'+i.id+'">📤 Compartilhar</button><button class="sec" data-pdf="'+i.id+'">📄 PDF</button><button class="sec" data-ed="'+i.id+'">✏️ Editar</button>'+(i.foto?'<button class="sec" data-c="'+i.id+'">✂️ Recortar</button>':'')+'<button class="sec" data-p="'+i.id+'">🖨️ Imprimir este</button><button class="dan" data-d="'+i.id+'">Excluir</button></div></div>';
+   +'<div class="acts"><button data-s="'+i.id+'">📤 Compartilhar</button><button class="sec" data-pdf="'+i.id+'">📄 PDF</button><button class="sec" data-ed="'+i.id+'">✏️ Editar</button>'+(i.foto?'<button class="sec" data-c="'+i.id+'">✂️ Recortar</button>':'')+'<button class="sec" data-p="'+i.id+'">🖨️ Imprimir este</button><button class="dan" data-d="'+i.id+'">Excluir</button></div></div>';}
+  var grupos=[['voto','🗳️ Comprovantes de votação'],['decl','📄 Declarações de trabalho']];
+  l.innerHTML=grupos.map(function(g){
+   var arr=items.filter(function(i){return (i.tipo==='decl'?'decl':'voto')===g[0]}).sort(function(a,b){return String(a.data||'').localeCompare(String(b.data||''))||(a.id-b.id)});
+   if(!arr.length)return '';
+   return '<details class="card grp" data-g="'+g[0]+'"'+(abertos[g[0]]?' open':'')+'><summary><span>'+g[1]+' <span class="mut">('+arr.length+')</span></span></summary><div class="det-body">'+arr.map(itemHtml).join('')+'</div></details>';
   }).join('');
  }
   function compartilha(it){
@@ -634,7 +759,7 @@ body{background-repeat:repeat,no-repeat}
   it.tipo=$('eTipo').value;it.eleicao=$('eEleicao').value;it.data=$('eData').value;it.turno=$('eTurno').value;
   it.zona=$('eZona').value;it.secao=$('eSecao').value;it.local=$('eLocal').value;it.obs=$('eObs').value;
   if(!save()){var o=JSON.parse(bak);for(var k in o)it[k]=o[k];return}
-  $('edit').style.display='none';editId=null;render();toast('Alterações salvas ✓');
+  nuvPush(it);$('edit').style.display='none';editId=null;render();toast('Alterações salvas ✓');
  };
  $('zoom').onclick=function(){$('zoom').style.display='none'};
  $('eLer').onclick=function(){
@@ -651,12 +776,12 @@ body{background-repeat:repeat,no-repeat}
   if(ed){var it3=items.filter(function(i){return String(i.id)===ed})[0];if(it3)openEdit(it3)}
   var pf=e.target.getAttribute('data-pdf');
   if(pf){var it4=items.filter(function(i){return String(i.id)===pf})[0];if(it4)gerarPdf([it4],'comprovante-'+(it4.data||'votacao')+'.pdf')}
-  if(cc){var it2=items.filter(function(i){return String(i.id)===cc})[0];if(it2)openCrop(it2.foto,function(res){var old=it2.foto;it2.foto=res;if(save())render();else it2.foto=old})}
+  if(cc){var it2=items.filter(function(i){return String(i.id)===cc})[0];if(it2)openCrop(it2.foto,function(res){var old=it2.foto;it2.foto=res;if(save()){nuvPush(it2);render()}else it2.foto=old})}
   if(s){var it=items.filter(function(i){return String(i.id)===s})[0];if(it)compartilha(it)}
-  if(d&&confirm('Excluir este comprovante?')){items=items.filter(function(i){return String(i.id)!==d});save();render()}
+  if(d&&confirm('Excluir este comprovante?')){items=items.filter(function(i){return String(i.id)!==d});save();nuvDel(Number(d));render()}
   if(p){var els=document.querySelectorAll('.item');
    els.forEach(function(el){if(el.id!=='i'+p)el.classList.add('noprint')});
-   window.print();
+   abreTudo(function(){window.print()});
    els.forEach(function(el){el.classList.remove('noprint')});}
  };
  $('bkp').onclick=function(){
@@ -666,7 +791,7 @@ body{background-repeat:repeat,no-repeat}
  $('rest').onclick=function(){$('restf').click()};
  $('restf').onchange=function(e){
   var f=e.target.files[0];if(!f)return;var r=new FileReader();
-  r.onload=function(){try{var x=JSON.parse(r.result);if(Array.isArray(x)){items=x;save();render();toast('Backup restaurado ✓')}}catch(err){alert('Arquivo inválido')}};
+  r.onload=function(){try{var x=JSON.parse(r.result);if(Array.isArray(x)){items=x;save();items.forEach(function(it){nuvPush(it)});render();toast('Backup restaurado ✓')}}catch(err){alert('Arquivo inválido')}};
   r.readAsText(f);
  };
  $('btnShare').onclick=function(){
@@ -679,7 +804,7 @@ body{background-repeat:repeat,no-repeat}
  $('btnImp').onclick=function(){
   var v=$('selImp').value,els=document.querySelectorAll('.item');
   els.forEach(function(el){if(v&&el.getAttribute('data-e')!==v)el.classList.add('noprint')});
-  window.print();
+  abreTudo(function(){window.print()});
   els.forEach(function(el){el.classList.remove('noprint')});
  };
  var dp=null;
@@ -742,6 +867,7 @@ body{background-repeat:repeat,no-repeat}
  $('btnOlho').onclick=function(){tOculto=!tOculto;aplicaOculto()};
  aplicaOculto();
  load();render();
+ nuvIniciar();
 })();
 </script>
 </body>
