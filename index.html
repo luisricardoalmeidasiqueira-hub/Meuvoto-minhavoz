@@ -93,6 +93,11 @@ body{background-repeat:repeat,no-repeat}
 .grp .card.item{background:rgba(127,127,127,.08);box-shadow:none}
 @media(max-width:430px){.hbar{gap:4px}.ib{width:30px;height:30px;line-height:30px;font-size:.9rem}.ib.chip{height:30px;line-height:28px;font-size:.72rem;padding:0 8px}header h1{font-size:.95rem;max-width:52%}header p{font-size:.75rem;max-width:52%}}
 @media print{details.grp>summary{display:none}details.grp{border:0!important;box-shadow:none!important;padding:0!important;background:none!important}.grp .card.item{background:#fff}}
+.calh{display:flex;justify-content:space-between;align-items:center;margin:6px 0}
+.calg{display:grid;grid-template-columns:repeat(7,1fr);gap:4px;text-align:center}
+.calg .dw{font-size:.72rem;color:var(--mut)}
+.calg button{padding:8px 0;font-size:.85rem;border-radius:8px;background:transparent;color:var(--tx);border:1px solid var(--bd);font-weight:600}
+.calg button.on{background:var(--pri);color:#fff;border-color:var(--pri)}
 </style>
 </head>
 <body>
@@ -233,8 +238,9 @@ body{background-repeat:repeat,no-repeat}
   <label>Dias de convocação (dias que você trabalhou)</label><input id="fgConv" inputmode="numeric" placeholder="ex: 2">
   <label>Escreva os dias de folga</label>
   <div class="row" style="align-items:center"><input id="fgTxt" placeholder="18, 19, 23, 24/11" style="flex:1"><button class="sec" id="fgAdd" style="flex:0 0 auto">Adicionar</button></div>
-  <label>Ou escolha uma data</label>
-  <div class="row" style="align-items:center"><input id="fgData" type="date" style="flex:1"><button class="sec" id="fgAdd2" style="flex:0 0 auto">＋</button></div>
+  <label>Ou toque nos dias no calendário (vários de uma vez)</label>
+  <div class="calh"><button class="sec" id="fgPrev" aria-label="Mês anterior">‹</button><b id="fgMesLb"></b><button class="sec" id="fgNext" aria-label="Próximo mês">›</button></div>
+  <div class="calg" id="fgCal"></div>
   <div id="fgChips" class="acts"></div>
   <div class="mut" id="fgResumo" style="margin-top:8px"></div>
   <div class="acts"><button id="fgSave" style="flex:1">Salvar</button><button class="sec" id="fgCancel">Cancelar</button></div>
@@ -273,7 +279,7 @@ body{background-repeat:repeat,no-repeat}
 <script>
 (function(){
  var AUTOR='Luis Ricardo de Almeida Siqueira';
- var VERSAO='1.9';
+ var VERSAO='2.0';
  var KEY='comprovantes-votacao',TK='titulo-eleitor',items=[],foto='';
  document.getElementById('copy').textContent='© '+new Date().getFullYear()+' '+AUTOR+' · Todos os direitos reservados';
  function $(id){return document.getElementById(id)}
@@ -545,7 +551,7 @@ body{background-repeat:repeat,no-repeat}
    +'<div class="acts"><button data-s="'+i.id+'">📤 Compartilhar</button><button class="sec" data-pdf="'+i.id+'">📄 PDF</button>'+(i.tipo==='decl'?'<button class="sec" data-fg="'+i.id+'">📅 Folgas</button>':'')+'<button class="sec" data-ed="'+i.id+'">✏️ Editar</button>'+(i.foto?'<button class="sec" data-c="'+i.id+'">✂️ Recortar</button>':'')+'<button class="sec" data-p="'+i.id+'">🖨️ Imprimir este</button><button class="dan" data-d="'+i.id+'">Excluir</button></div></div>';}
   var grupos=[['voto','🗳️ Comprovantes de votação'],['decl','📄 Declarações de trabalho']];
   l.innerHTML=grupos.map(function(g){
-   var arr=items.filter(function(i){return (i.tipo==='decl'?'decl':'voto')===g[0]}).sort(function(a,b){return String(a.data||'').localeCompare(String(b.data||''))||(a.id-b.id)});
+   var arr=items.filter(function(i){return (i.tipo==='decl'?'decl':'voto')===g[0]}).sort(function(a,b){return String(a.turno||'').localeCompare(String(b.turno||''))||String(a.data||'').localeCompare(String(b.data||''))||(a.id-b.id)});
    if(!arr.length)return '';
    return '<details class="card grp" data-g="'+g[0]+'"'+(abertos[g[0]]?' open':'')+'><summary><span>'+g[1]+' <span class="mut">('+arr.length+')</span></span></summary><div class="det-body">'+arr.map(itemHtml).join('')+'</div></details>';
   }).join('');
@@ -804,12 +810,26 @@ body{background-repeat:repeat,no-repeat}
   var conv=parseInt($('fgConv').value,10)||0,n=fgList.length,t='Tirados: '+n+(n===1?' dia':' dias');
   if(conv){var dir=conv*2,r=dir-n;t='Direito: '+dir+' dias (2 por dia de convocação) · '+t+' · '+(r>0?'restam '+r:(r<0?'passou '+(-r):'completo ✓'))}
   $('fgResumo').textContent=t;
+  fgCalRender();
+ }
+ var fgMes=null;
+ function fgCalRender(){
+  if(!fgMes)return;
+  var y=fgMes.y,m=fgMes.m,nomes=['janeiro','fevereiro','março','abril','maio','junho','julho','agosto','setembro','outubro','novembro','dezembro'];
+  $('fgMesLb').textContent=nomes[m]+' de '+y;
+  var first=new Date(y,m,1).getDay(),dias=new Date(y,m+1,0).getDate(),s='';
+  ['D','S','T','Q','Q','S','S'].forEach(function(d){s+='<div class="dw">'+d+'</div>'});
+  for(var i=0;i<first;i++)s+='<span></span>';
+  for(var d=1;d<=dias;d++){var iso=y+'-'+('0'+(m+1)).slice(-2)+'-'+('0'+d).slice(-2);s+='<button data-fd="'+iso+'" class="'+(fgList.indexOf(iso)>=0?'on':'')+'">'+d+'</button>'}
+  $('fgCal').innerHTML=s;
  }
  function fgAddDia(d){if(fgList.indexOf(d)<0)fgList.push(d);fgList.sort()}
  function fgAbre(it){
   fgId=it.id;fgList=(it.folgas||[]).slice();
   fgAno=String(it.data||'').slice(0,4)||String(new Date().getFullYear());
-  $('fgConv').value=it.convocados||'';$('fgTxt').value='';$('fgData').value='';$('fgTit').textContent=it.eleicao||'';
+  $('fgConv').value=it.convocados||'';$('fgTxt').value='';$('fgTit').textContent=it.eleicao||'';
+  var b0=fgList[0]?new Date(fgList[0]+'T12:00:00'):new Date();
+  fgMes={y:b0.getFullYear(),m:b0.getMonth()};
   fgRender();$('folga').style.display='flex';
  }
  function fgParse(txt){
@@ -830,7 +850,14 @@ body{background-repeat:repeat,no-repeat}
   r.forEach(fgAddDia);$('fgTxt').value='';fgRender();return true;
  }
  $('fgAdd').onclick=function(){fgTentaTexto()};
- $('fgAdd2').onclick=function(){var d=$('fgData').value;if(!d){toast('Escolha uma data');return}fgAddDia(d);$('fgData').value='';fgRender()};
+
+ $('fgCal').onclick=function(e){
+  var d=e.target.getAttribute('data-fd');if(!d)return;
+  var i=fgList.indexOf(d);if(i>=0)fgList.splice(i,1);else{fgList.push(d);fgList.sort()}
+  fgRender();
+ };
+ $('fgPrev').onclick=function(){fgMes.m--;if(fgMes.m<0){fgMes.m=11;fgMes.y--}fgCalRender()};
+ $('fgNext').onclick=function(){fgMes.m++;if(fgMes.m>11){fgMes.m=0;fgMes.y++}fgCalRender()};
  $('fgChips').onclick=function(e){var x=e.target.getAttribute('data-fgx');if(x!==null){fgList.splice(parseInt(x,10),1);fgRender()}};
  $('fgConv').addEventListener('input',fgRender);
  $('fgCancel').onclick=function(){$('folga').style.display='none';fgId=null};
