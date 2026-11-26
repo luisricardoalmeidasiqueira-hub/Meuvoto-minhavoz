@@ -186,6 +186,8 @@ body{background-repeat:repeat,no-repeat}
  <label>E-mail</label><input id="nEmail" type="email" autocomplete="username" autocapitalize="off">
  <label>Senha</label><input id="nSenha" type="password" autocomplete="current-password">
  <div class="acts"><button id="nEntrar" style="flex:1">Entrar</button><button class="sec" id="nCriar" style="flex:1">Criar conta</button><button class="dan" id="nSair">Sair</button></div>
+ <div class="acts"><button class="sec" id="nTeste" style="flex:1">🔧 Testar conexão</button><button class="sec" id="nRegras" style="flex:1">📋 Copiar as regras</button></div>
+ <pre id="nDiag" class="mut" style="white-space:pre-wrap;margin:6px 0 0;font:inherit"></pre>
  <div class="acts"><button class="sec" id="nQrMostra" style="flex:1">📱 Conectar outro aparelho (mostrar QR)</button><button class="sec" id="nQrLer" style="flex:1">📷 Ler QR de conexão</button></div>
  <p class="mut" style="margin:8px 0 0">Bolinha: 🟢 tudo salvo, 🟡 enviando, 🔴 sem conexão ou erro, ⚪ desligada. Os comprovantes e declarações vão para a nuvem. A foto e o número do título ficam só neste aparelho.</p>
 </div></details>
@@ -279,7 +281,7 @@ body{background-repeat:repeat,no-repeat}
 <script>
 (function(){
  var AUTOR='Luis Ricardo de Almeida Siqueira';
- var VERSAO='2.0';
+ var VERSAO='2.1';
  var KEY='comprovantes-votacao',TK='titulo-eleitor',items=[],foto='';
  document.getElementById('copy').textContent='© '+new Date().getFullYear()+' '+AUTOR+' · Todos os direitos reservados';
  function $(id){return document.getElementById(id)}
@@ -418,6 +420,7 @@ body{background-repeat:repeat,no-repeat}
   var c={off:'#8a94a3',ok:'#2ecc71',sync:'#f1c40f',err:'#e74c3c'}[est]||'#8a94a3';
   $('nuvDot').style.background=c;nuv.est=est;
   $('btnNuv').title={off:'Nuvem desligada',ok:'Tudo salvo na nuvem',sync:'Enviando...',err:'Sem conexão ou erro'}[est]||'Nuvem';
+  if(est==='ok'&&nuv.user)nuvMsg('Conectado como '+nuv.user.email+' ✓ tudo salvo');
  }
  function nuvMsg(t){$('nMsg').textContent=t}
  function nuvCfg(){try{return JSON.parse(localStorage.getItem('fb-config')||'null')}catch(e){return null}}
@@ -432,7 +435,7 @@ body{background-repeat:repeat,no-repeat}
  function nuvEnvia(it){
   if(!nuv.col)return;
   nuvDot('sync');
-  nuv.col.doc(String(it.id)).set(it).then(function(){nuvDot('ok')}).catch(function(err){nuvDot('err');nuvMsg('Não consegui enviar: '+((err&&err.code)||'erro'))});
+  nuv.col.doc(String(it.id)).set(it).then(function(){nuvDot('ok')}).catch(function(err){nuvDot('err');nuvMsg((err&&err.code)==='permission-denied'?'Sem permissão. Toque em 🔧 Testar conexão para ver o que falta.':'Não consegui enviar: '+((err&&err.code)||'erro'))});
  }
  function nuvPush(it){it.upd=Date.now();salvaLocal();nuvEnvia(it)}
  function nuvFlushDel(){
@@ -464,7 +467,7 @@ body{background-repeat:repeat,no-repeat}
    nuvDot(snap.metadata.hasPendingWrites?'sync':'ok');
   },function(err){
    nuvDot('err');
-   nuvMsg(err&&err.code==='permission-denied'?'Sem permissão. Confira as regras do Firestore.':'Erro na nuvem: '+((err&&err.message)||''));
+   nuvMsg(err&&err.code==='permission-denied'?'Sem permissão. Toque em 🔧 Testar conexão para ver o que falta.':'Erro na nuvem: '+((err&&err.message)||''));
   });
  }
  function nuvAuth(u){
@@ -498,6 +501,30 @@ body{background-repeat:repeat,no-repeat}
   (criar?a.createUserWithEmailAndPassword(e,s):a.signInWithEmailAndPassword(e,s))
    .then(function(){try{localStorage.setItem('nuv-email',e)}catch(x){}$('nSenha').value='';toast('Conectado ✓')}).catch(function(err){toast(nuvErro(err),4500)});
  }
+ var REGRAS="rules_version = '2';\nservice cloud.firestore {\n  match /databases/{database}/documents {\n    match /tenants/{empresaId} {\n      allow read, write: if request.auth != null;\n    }\n    match /tenants/{empresaId}/dados/{doc} {\n      allow read, write: if request.auth != null;\n    }\n    match /_system/{doc} {\n      allow read, write: if request.auth != null;\n    }\n    match /admins/{adminId} {\n      allow read, write: if request.auth != null;\n    }\n    match /users/{uid}/{document=**} {\n      allow read, write: if request.auth != null && request.auth.uid == uid;\n    }\n  }\n}\n";
+ function nuvTeste(){
+  var out=[];function show(){$('nDiag').textContent=out.join('\n')}
+  var cfg=nuvCfg();
+  if(!cfg){out.push('❌ Falta a configuração do Firebase. Cole e toque em Salvar configuração.');show();return}
+  out.push('✅ Configuração salva (projeto: '+cfg.projectId+')');
+  if(!nuv.app){out.push('⏳ Conectando... toque em Testar de novo em alguns segundos.');show();nuvIniciar();return}
+  if(!nuv.user){out.push('❌ Você não está logado. Digite a senha e toque em Entrar.');show();return}
+  out.push('✅ Logado como '+nuv.user.email);show();
+  var ref=nuv.db.collection('users').doc(nuv.user.uid).collection('teste').doc('ping');
+  ref.set({t:Date.now()}).then(function(){out.push('✅ Escrever na nuvem: funcionou');show();return ref.get()})
+   .then(function(s){out.push(s&&s.exists?'✅ Ler da nuvem: funcionou':'❌ Ler da nuvem: não achou o teste');show();return ref.delete()})
+   .then(function(){out.push('🎉 Tudo certo! Toque no botão da versão para recarregar e a bolinha deve ficar verde.');show()})
+   .catch(function(err){
+    var c=(err&&err.code)||'erro';out.push('❌ Falhou: '+c);
+    if(c==='permission-denied')out.push('As regras do Firestore não estão liberando este caminho. Toque em 📋 Copiar as regras, cole na aba Regras do Firebase, toque em Publicar e espere 1 minuto. Depois teste de novo.');
+    show();
+   });
+ }
+ $('nTeste').onclick=nuvTeste;
+ $('nRegras').onclick=function(){
+  if(navigator.clipboard&&navigator.clipboard.writeText){navigator.clipboard.writeText(REGRAS).then(function(){toast('Regras copiadas ✓ Cole na aba Regras do Firebase',4000)},function(){toast('Não consegui copiar',3000)})}
+  else toast('Este navegador não copia. Use o texto que eu mandei na conversa',4000);
+ };
  $('nCfgSave').onclick=function(){
   var o=nuvParse($('nCfg').value);
   if(!o.apiKey||!o.projectId){toast('Não achei apiKey e projectId no texto',4000);return}
