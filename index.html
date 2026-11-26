@@ -186,7 +186,7 @@ body{background-repeat:repeat,no-repeat}
  <label>E-mail</label><input id="nEmail" type="email" autocomplete="username" autocapitalize="off">
  <label>Senha</label><input id="nSenha" type="password" autocomplete="current-password">
  <div class="acts"><button id="nEntrar" style="flex:1">Entrar</button><button class="sec" id="nCriar" style="flex:1">Criar conta</button><button class="dan" id="nSair">Sair</button></div>
- <div class="acts"><button class="sec" id="nTeste" style="flex:1">🔧 Testar conexão</button><button class="sec" id="nRegras" style="flex:1">📋 Copiar as regras</button></div>
+ <div class="acts"><button class="sec" id="nTeste" style="flex:1">🔧 Testar conexão</button><button class="sec" id="nRegras" style="flex:1">📋 Copiar regras (projeto novo)</button></div>
  <pre id="nDiag" class="mut" style="white-space:pre-wrap;margin:6px 0 0;font:inherit"></pre>
  <div class="acts"><button class="sec" id="nQrMostra" style="flex:1">📱 Conectar outro aparelho (mostrar QR)</button><button class="sec" id="nQrLer" style="flex:1">📷 Ler QR de conexão</button></div>
  <p class="mut" style="margin:8px 0 0">Bolinha: 🟢 tudo salvo, 🟡 enviando, 🔴 sem conexão ou erro, ⚪ desligada. Os comprovantes e declarações vão para a nuvem. A foto e o número do título ficam só neste aparelho.</p>
@@ -281,7 +281,7 @@ body{background-repeat:repeat,no-repeat}
 <script>
 (function(){
  var AUTOR='Luis Ricardo de Almeida Siqueira';
- var VERSAO='2.3';
+ var VERSAO='2.4';
  var KEY='comprovantes-votacao',TK='titulo-eleitor',items=[],foto='';
  document.getElementById('copy').textContent='© '+new Date().getFullYear()+' '+AUTOR+' · Todos os direitos reservados';
  function $(id){return document.getElementById(id)}
@@ -501,7 +501,7 @@ body{background-repeat:repeat,no-repeat}
   (criar?a.createUserWithEmailAndPassword(e,s):a.signInWithEmailAndPassword(e,s))
    .then(function(){try{localStorage.setItem('nuv-email',e)}catch(x){}$('nSenha').value='';toast('Conectado ✓')}).catch(function(err){toast(nuvErro(err),4500)});
  }
- var REGRAS="rules_version = '2';\nservice cloud.firestore {\n  match /databases/{database}/documents {\n    match /tenants/{empresaId} {\n      allow read, write: if request.auth != null;\n    }\n    match /tenants/{empresaId}/dados/{doc} {\n      allow read, write: if request.auth != null;\n    }\n    match /_system/{doc} {\n      allow read, write: if request.auth != null;\n    }\n    match /admins/{adminId} {\n      allow read, write: if request.auth != null;\n    }\n    match /users/{uid}/{document=**} {\n      allow read, write: if request.auth != null && request.auth.uid == uid;\n    }\n  }\n}\n";
+ var REGRAS="rules_version = '2';\nservice cloud.firestore {\n  match /databases/{database}/documents {\n    match /users/{uid}/{document=**} {\n      allow read, write: if request.auth != null && request.auth.uid == uid;\n    }\n  }\n}\n";
  function nuvRest(cfg,out,show){
   return nuv.user.getIdToken().then(function(t){
    out.push('✅ Chave de acesso (token) da conta: gerada');show();
@@ -516,7 +516,7 @@ body{background-repeat:repeat,no-repeat}
      out.push('🔬 Resposta direta do Google: '+r.status+(er.status?' '+er.status:'')+(reason?' ('+reason+')':''));
      if(er.message)out.push(String(er.message).slice(0,220));
      if(/REFERER|SERVICE_BLOCKED|API_KEY/i.test(reason+' '+(er.message||'')))out.push('➡️ A chave de API do projeto tem restrição. No Google Cloud: APIs e serviços > Credenciais > chave "Browser key": em restrições de site, adicione luisricardoalmeidasiqueira-hub.github.io/* e confira se a API Cloud Firestore está permitida.');
-     else if(/app check/i.test(er.message||''))out.push('➡️ O App Check está exigindo verificação. No Firebase: Build > App Check > Cloud Firestore: deixe sem exigir.');
+     else if(/app check/i.test(er.message||''))out.push('➡️ O App Check está exigindo verificação. No Firebase: Build > App Check > Cloud Firestore: deixe sem exigir. Dica: o jeito mais seguro é criar um projeto Firebase novo só para os comprovantes.');
      else if(r.status===403)out.push('➡️ As regras publicadas estão recusando. Em Firestore > Regras, confira se aparece "Publicado" com a data de hoje.');
     }
     show();
@@ -560,7 +560,9 @@ body{background-repeat:repeat,no-repeat}
   var o=nuvParse($('nCfg').value);
   if(!o.apiKey||!o.projectId){toast('Não achei apiKey e projectId no texto',4000);return}
   try{localStorage.setItem('fb-config',JSON.stringify(o))}catch(e){}
-  $('nCfg').value='';toast('Configuração salva ✓');nuvIniciar();
+  $('nCfg').value='';
+  if(nuv.app){toast('Configuração salva ✓ Reiniciando o app...',2500);setTimeout(function(){location.reload()},1200);return}
+  toast('Configuração salva ✓');nuvIniciar();
  };
  $('nEntrar').onclick=function(){nuvAcao(false)};
  $('nCriar').onclick=function(){nuvAcao(true)};
