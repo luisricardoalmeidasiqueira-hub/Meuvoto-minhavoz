@@ -281,7 +281,7 @@ body{background-repeat:repeat,no-repeat}
 <script>
 (function(){
  var AUTOR='Luis Ricardo de Almeida Siqueira';
- var VERSAO='2.2';
+ var VERSAO='2.3';
  var KEY='comprovantes-votacao',TK='titulo-eleitor',items=[],foto='';
  document.getElementById('copy').textContent='© '+new Date().getFullYear()+' '+AUTOR+' · Todos os direitos reservados';
  function $(id){return document.getElementById(id)}
@@ -480,7 +480,7 @@ body{background-repeat:repeat,no-repeat}
   if(!cfg||!cfg.apiKey||!cfg.projectId){nuvDot('off');nuvMsg('Cole a configuração do Firebase para ligar a nuvem.');return}
   nuvDot('sync');nuvMsg('Conectando...');
   nuvCarrega().then(function(){
-   if(!nuv.app){nuv.app=firebase.initializeApp(cfg);nuv.db=firebase.firestore();firebase.auth().onAuthStateChanged(nuvAuth)}
+   if(!nuv.app){nuv.app=firebase.initializeApp(cfg);var au=firebase.auth();nuv.db=firebase.firestore();au.onAuthStateChanged(nuvAuth)}
   }).catch(function(){nuvDot('err');nuvMsg('Sem internet para carregar a nuvem.')});
  }
  function nuvErro(e){
@@ -502,6 +502,27 @@ body{background-repeat:repeat,no-repeat}
    .then(function(){try{localStorage.setItem('nuv-email',e)}catch(x){}$('nSenha').value='';toast('Conectado ✓')}).catch(function(err){toast(nuvErro(err),4500)});
  }
  var REGRAS="rules_version = '2';\nservice cloud.firestore {\n  match /databases/{database}/documents {\n    match /tenants/{empresaId} {\n      allow read, write: if request.auth != null;\n    }\n    match /tenants/{empresaId}/dados/{doc} {\n      allow read, write: if request.auth != null;\n    }\n    match /_system/{doc} {\n      allow read, write: if request.auth != null;\n    }\n    match /admins/{adminId} {\n      allow read, write: if request.auth != null;\n    }\n    match /users/{uid}/{document=**} {\n      allow read, write: if request.auth != null && request.auth.uid == uid;\n    }\n  }\n}\n";
+ function nuvRest(cfg,out,show){
+  return nuv.user.getIdToken().then(function(t){
+   out.push('✅ Chave de acesso (token) da conta: gerada');show();
+   return fetch('https://firestore.googleapis.com/v1/projects/'+encodeURIComponent(cfg.projectId)+'/databases/(default)/documents/_system/ping?key='+encodeURIComponent(cfg.apiKey),{headers:{Authorization:'Bearer '+t}});
+  }).then(function(r){
+   return r.text().then(function(txt){
+    var j={};try{j=JSON.parse(txt)}catch(e){}
+    var er=j.error||{},reason='';
+    (er.details||[]).forEach(function(d){if(d&&d.reason)reason=d.reason});
+    if(r.status===200||r.status===404){out.push('🔬 Resposta direta do Google: '+r.status+' - as regras deixaram ler ✅')}
+    else{
+     out.push('🔬 Resposta direta do Google: '+r.status+(er.status?' '+er.status:'')+(reason?' ('+reason+')':''));
+     if(er.message)out.push(String(er.message).slice(0,220));
+     if(/REFERER|SERVICE_BLOCKED|API_KEY/i.test(reason+' '+(er.message||'')))out.push('➡️ A chave de API do projeto tem restrição. No Google Cloud: APIs e serviços > Credenciais > chave "Browser key": em restrições de site, adicione luisricardoalmeidasiqueira-hub.github.io/* e confira se a API Cloud Firestore está permitida.');
+     else if(/app check/i.test(er.message||''))out.push('➡️ O App Check está exigindo verificação. No Firebase: Build > App Check > Cloud Firestore: deixe sem exigir.');
+     else if(r.status===403)out.push('➡️ As regras publicadas estão recusando. Em Firestore > Regras, confira se aparece "Publicado" com a data de hoje.');
+    }
+    show();
+   });
+  }).catch(function(e){out.push('🔬 Não consegui falar direto com o Google: '+((e&&e.message)||'erro'));show()});
+ }
  function nuvTeste(){
   var out=[];function show(){$('nDiag').textContent=out.join('\n')}
   var cfg=nuvCfg();
@@ -518,6 +539,8 @@ body{background-repeat:repeat,no-repeat}
    out.push('⚠️ Leitura de referência falhou: '+c);
    if(c==='permission-denied')out.push('A nuvem recusa até as regras antigas. Isso não é problema das regras novas. Veja no Firebase: Build > App Check (não pode estar exigindo verificação para o Firestore) e confira se o projeto é o mesmo da configuração: '+cfg.projectId+'.');
    show();
+  }).then(function(){
+   return nuvRest(cfg,out,show);
   }).then(function(){
    return ref.set({t:Date.now()}).then(function(){out.push('✅ Escrever na pasta do app: funcionou');show();return ref.get()})
     .then(function(s){out.push(s&&s.exists?'✅ Ler da pasta do app: funcionou':'❌ Ler da pasta do app: não achou o teste');show();return ref.delete()})
