@@ -183,9 +183,12 @@ body{background-repeat:repeat,no-repeat}
  <label>Configuração do Firebase (cole aqui)</label>
  <textarea id="nCfg" rows="3" autocomplete="off" autocapitalize="off" spellcheck="false" placeholder='apiKey: "...", authDomain: "...", projectId: "...", appId: "..."'></textarea>
  <div class="acts"><button class="sec" id="nCfgSave" style="flex:1">Salvar configuração</button></div>
- <label>E-mail</label><input id="nEmail" type="email" autocomplete="username" autocapitalize="off">
- <label>Senha</label><input id="nSenha" type="password" autocomplete="current-password">
- <div class="acts"><button id="nEntrar" style="flex:1">Entrar</button><button class="sec" id="nCriar" style="flex:1">Criar conta</button><button class="dan" id="nSair">Sair</button></div>
+ <form id="nForm" autocomplete="on" onsubmit="return false">
+ <label>E-mail</label><input id="nEmail" name="username" type="email" autocomplete="username" autocapitalize="off">
+ <label>Senha</label><input id="nSenha" name="password" type="password" autocomplete="current-password">
+ <div class="acts"><button type="submit" id="nEntrar" style="flex:1">Entrar</button><button type="button" class="sec" id="nCriar" style="flex:1">Criar conta</button><button type="button" class="dan" id="nSair">Sair</button></div>
+ </form>
+ <div class="acts"><button class="sec" id="nLink" style="flex:1 1 100%">🔗 Enviar link de conexão para outro aparelho</button></div>
  <div class="acts"><button class="sec" id="nTeste" style="flex:1">🔧 Testar conexão</button><button class="sec" id="nRegras" style="flex:1">📋 Copiar regras (projeto novo)</button></div>
  <pre id="nDiag" class="mut" style="white-space:pre-wrap;margin:6px 0 0;font:inherit"></pre>
  <div class="acts"><button class="sec" id="nQrMostra" style="flex:1">📱 Conectar outro aparelho (mostrar QR)</button><button class="sec" id="nQrLer" style="flex:1">📷 Ler QR de conexão</button></div>
@@ -281,7 +284,7 @@ body{background-repeat:repeat,no-repeat}
 <script>
 (function(){
  var AUTOR='Luis Ricardo de Almeida Siqueira';
- var VERSAO='2.4';
+ var VERSAO='2.6';
  var KEY='comprovantes-votacao',TK='titulo-eleitor',items=[],foto='';
  document.getElementById('copy').textContent='© '+new Date().getFullYear()+' '+AUTOR+' · Todos os direitos reservados';
  function $(id){return document.getElementById(id)}
@@ -532,24 +535,18 @@ body{background-repeat:repeat,no-repeat}
   if(!nuv.user){out.push('❌ Você não está logado. Digite a senha e toque em Entrar.');show();return}
   out.push('✅ Logado como '+nuv.user.email);show();
   var ref=nuv.db.collection('users').doc(nuv.user.uid).collection('teste').doc('ping');
-  nuv.db.collection('_system').doc('ping').get().then(function(){
-   out.push('✅ Leitura de referência (regras antigas): ok');show();
-  },function(err){
-   var c=(err&&err.code)||'erro';
-   out.push('⚠️ Leitura de referência falhou: '+c);
-   if(c==='permission-denied')out.push('A nuvem recusa até as regras antigas. Isso não é problema das regras novas. Veja no Firebase: Build > App Check (não pode estar exigindo verificação para o Firestore) e confira se o projeto é o mesmo da configuração: '+cfg.projectId+'.');
-   show();
-  }).then(function(){
-   return nuvRest(cfg,out,show);
-  }).then(function(){
-   return ref.set({t:Date.now()}).then(function(){out.push('✅ Escrever na pasta do app: funcionou');show();return ref.get()})
-    .then(function(s){out.push(s&&s.exists?'✅ Ler da pasta do app: funcionou':'❌ Ler da pasta do app: não achou o teste');show();return ref.delete()})
-    .then(function(){out.push('🎉 Tudo certo! Toque no botão da versão para recarregar e a bolinha deve ficar verde.');show()});
-  }).catch(function(err){
-   var c=(err&&err.code)||'erro';out.push('❌ Falhou na pasta do app: '+c);
-   if(c==='permission-denied')out.push('As regras novas (users/...) não estão valendo para este caminho. Confira na aba Regras se o texto está publicado e espere 1 minuto.');
-   show();
-  });
+  ref.set({t:Date.now()}).then(function(){out.push('✅ Escrever na nuvem: funcionou');show();return ref.get()})
+   .then(function(s){out.push(s&&s.exists?'✅ Ler da nuvem: funcionou':'❌ Ler da nuvem: não achou o teste');show();return ref.delete()})
+   .then(function(){out.push('🎉 Tudo certo! A nuvem está funcionando.');show()})
+   .catch(function(err){
+    var c=(err&&err.code)||'erro';out.push('❌ Falhou ao gravar na nuvem: '+c);show();
+    if(c==='permission-denied')out.push('As regras do Firestore não estão liberando a pasta users/. Confira a aba Regras e espere 1 minuto.');
+    return nuv.db.collection('_system').doc('ping').get().then(function(){
+     out.push('ℹ️ Leitura de referência (só vale no projeto antigo): ok');show();
+    },function(e2){
+     out.push('ℹ️ Leitura de referência (só vale no projeto antigo): '+((e2&&e2.code)||'erro')+'. Em projeto novo isso é normal.');show();
+    }).then(function(){return nuvRest(cfg,out,show)});
+   });
  }
  $('nTeste').onclick=nuvTeste;
  $('nRegras').onclick=function(){
@@ -570,6 +567,38 @@ body{background-repeat:repeat,no-repeat}
  $('btnNuv').onclick=function(){var c=$('nuvCard');c.open=true;c.scrollIntoView({behavior:'smooth',block:'center'})};
  window.addEventListener('offline',function(){if(nuv.user)nuvDot('err')});
  window.addEventListener('online',function(){if(nuv.user)nuvDot('sync')});
+ function nuvLinkGerar(){
+  var cfg=nuvCfg();
+  if(!cfg){toast('Salve a configuração do Firebase antes',3500);return}
+  var o={apiKey:cfg.apiKey,authDomain:cfg.authDomain,projectId:cfg.projectId,appId:cfg.appId},em='';
+  try{em=localStorage.getItem('nuv-email')||''}catch(e){}
+  if(!em)em=$('nEmail').value.trim();
+  if(em)o.email=em;
+  var b64=btoa(unescape(encodeURIComponent(JSON.stringify(o)))).replace(/\+/g,'-').replace(/\//g,'_').replace(/=+$/,'');
+  var url=location.href.split('#')[0].split('?')[0]+'#mc='+b64;
+  if(navigator.share){navigator.share({title:'Meus Comprovantes - conectar',text:'Abra este link no outro aparelho para conectar a nuvem (não leva a senha):',url:url}).catch(function(){})}
+  else if(navigator.clipboard&&navigator.clipboard.writeText){navigator.clipboard.writeText(url).then(function(){toast('Link copiado ✓ Envie para o outro aparelho',4000)})}
+  else{prompt('Copie o link:',url)}
+ }
+ function nuvLinkLer(){
+  if(location.hash.indexOf('#mc=')!==0)return false;
+  var ok=false;
+  try{
+   var s=location.hash.slice(4).replace(/-/g,'+').replace(/_/g,'/');
+   while(s.length%4)s+='=';
+   var o=JSON.parse(decodeURIComponent(escape(atob(s))));
+   if(o.apiKey&&o.projectId){
+    var em=o.email;delete o.email;
+    localStorage.setItem('fb-config',JSON.stringify(o));
+    if(em)localStorage.setItem('nuv-email',em);
+    ok=true;
+   }
+  }catch(e){}
+  try{history.replaceState(null,'',location.pathname+location.search)}catch(e){}
+  return ok;
+ }
+ $('nLink').onclick=nuvLinkGerar;
+ var veioLink=nuvLinkLer();
  try{var em0=localStorage.getItem('nuv-email');if(em0)$('nEmail').value=em0}catch(e){}
  $('btnUpd').textContent='🔄 v'+VERSAO;
  $('fotoG').onchange=$('foto').onchange;
@@ -1055,6 +1084,7 @@ body{background-repeat:repeat,no-repeat}
  aplicaOculto();
  load();render();
  nuvIniciar();
+ if(veioLink){var cn=$('nuvCard');cn.open=true;toast('Conexão lida ✓ Digite a senha e toque em Entrar',6000);setTimeout(function(){cn.scrollIntoView({behavior:'smooth',block:'center'});$('nSenha').focus()},600)}
 })();
 </script>
 </body>
